@@ -71,7 +71,7 @@ export function AgentMessageInput({
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        topK 기본값은 3입니다. 높일수록 더 많은 문서를 참고하지만 로컬 LLM 응답이 느려질 수 있습니다.
+        topK 기본값은 3입니다. 답변은 streaming으로 표시되지만 첫 요청은 Ollama 모델 로딩 때문에 느릴 수 있습니다.
       </p>
     </form>
   );

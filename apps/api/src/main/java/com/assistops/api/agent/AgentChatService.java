@@ -4,20 +4,28 @@ import com.assistops.api.global.exception.NotFoundException;
 import com.assistops.api.rag.RagAnswerRequest;
 import com.assistops.api.rag.RagAnswerResponse;
 import com.assistops.api.rag.RagAnswerService;
+import com.assistops.api.rag.RagAnswerStreamHandler;
 import com.assistops.api.user.User;
 import com.assistops.api.workspace.WorkspaceMember;
 import com.assistops.api.workspace.WorkspaceMemberRepository;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Service
 public class AgentChatService {
 
+	private static final Logger log = LoggerFactory.getLogger(AgentChatService.class);
 	private static final String DEFAULT_TITLE = "새 채팅";
 	private static final int GENERATED_TITLE_LENGTH = 30;
 	private static final int TITLE_MAX_LENGTH = 255;
@@ -27,19 +35,25 @@ public class AgentChatService {
 	private final AgentChatMessageSourceRepository sourceRepository;
 	private final WorkspaceMemberRepository workspaceMemberRepository;
 	private final RagAnswerService ragAnswerService;
+	private final TaskExecutor taskExecutor;
+	private final TransactionTemplate transactionTemplate;
 
 	public AgentChatService(
 		AgentChatSessionRepository sessionRepository,
 		AgentChatMessageRepository messageRepository,
 		AgentChatMessageSourceRepository sourceRepository,
 		WorkspaceMemberRepository workspaceMemberRepository,
-		RagAnswerService ragAnswerService
+		RagAnswerService ragAnswerService,
+		TaskExecutor taskExecutor,
+		TransactionTemplate transactionTemplate
 	) {
 		this.sessionRepository = sessionRepository;
 		this.messageRepository = messageRepository;
 		this.sourceRepository = sourceRepository;
 		this.workspaceMemberRepository = workspaceMemberRepository;
 		this.ragAnswerService = ragAnswerService;
+		this.taskExecutor = taskExecutor;
+		this.transactionTemplate = transactionTemplate;
 	}
 
 	@Transactional
@@ -49,6 +63,15 @@ public class AgentChatService {
 		AgentChatSession session = sessionRepository.save(new AgentChatSession(workspaceId, user.getId(), title));
 
 		return toDetailResponse(session);
+	}
+
+	public SseEmitter streamMessage(User user, UUID sessionId, AgentChatMessageRequest request) {
+		StreamContext context = transactionTemplate.execute(status -> createUserMessageForStreaming(user, sessionId, request));
+		SseEmitter emitter = new SseEmitter(0L);
+
+		taskExecutor.execute(() -> runMessageStream(user, context, emitter));
+
+		return emitter;
 	}
 
 	@Transactional(readOnly = true)
@@ -105,6 +128,112 @@ public class AgentChatService {
 		}
 		messageRepository.deleteBySessionId(session.getId());
 		sessionRepository.delete(session);
+	}
+
+	private StreamContext createUserMessageForStreaming(User user, UUID sessionId, AgentChatMessageRequest request) {
+		AgentChatSession session = findOwnedSession(user.getId(), sessionId);
+		String content = request.content().trim();
+		AgentChatMessage userMessage = messageRepository.save(AgentChatMessage.user(session.getId(), content));
+
+		if (DEFAULT_TITLE.equals(session.getTitle())
+			&& messageRepository.countBySessionIdAndRole(session.getId(), AgentChatRole.USER) == 1) {
+			session.rename(generateTitle(content));
+		}
+		session.touch();
+
+		return new StreamContext(
+			session.getId(),
+			session.getWorkspaceId(),
+			userMessage.getId(),
+			content,
+			request.topK()
+		);
+	}
+
+	private void runMessageStream(User user, StreamContext context, SseEmitter emitter) {
+		String stage = "metadata";
+
+		try {
+			sendEvent(emitter, "metadata", new AgentChatStreamMetadataResponse(
+				context.sessionId(),
+				context.userMessageId(),
+				ragAnswerService.modelName()
+			));
+
+			stage = "ragAnswer";
+			RagAnswerResponse answer = ragAnswerService.streamAnswer(
+				user,
+				new RagAnswerRequest(context.content(), context.topK(), context.workspaceId()),
+				new RagAnswerStreamHandler() {
+					@Override
+					public void onSource(com.assistops.api.rag.search.ChunkSearchResult source) {
+						sendEvent(emitter, "source", AgentChatStreamSourceResponse.from(source));
+					}
+
+					@Override
+					public void onToken(String token) {
+						sendEvent(emitter, "token", new AgentChatStreamTokenResponse(token));
+					}
+				}
+			);
+
+			stage = "persistAssistantMessage";
+			AgentChatMessage assistantMessage = transactionTemplate.execute(status -> saveAssistantMessage(
+				context.sessionId(),
+				answer
+			));
+
+			sendEvent(emitter, "latency", answer.latencyMetrics());
+			sendEvent(emitter, "done", new AgentChatStreamDoneResponse(
+				assistantMessage.getId(),
+				answer.answerId()
+			));
+			emitter.complete();
+		}
+		catch (RuntimeException exception) {
+			log.warn(
+				"Agent chat stream failed: stage={}, sessionId={}, userMessageId={}, questionLength={}",
+				stage,
+				context.sessionId(),
+				context.userMessageId(),
+				context.content().length(),
+				exception
+			);
+			try {
+				sendEvent(emitter, "error", new AgentChatStreamErrorResponse(
+					"답변 스트리밍 중 오류가 발생했습니다. Ollama 모델과 API 로그를 확인해 주세요."
+				));
+			}
+			catch (RuntimeException ignored) {
+				log.debug("Failed to send agent chat stream error event.", ignored);
+			}
+			emitter.complete();
+		}
+	}
+
+	private AgentChatMessage saveAssistantMessage(UUID sessionId, RagAnswerResponse answer) {
+		AgentChatSession session = sessionRepository.findById(sessionId)
+			.orElseThrow(() -> new NotFoundException("Agent chat session not found."));
+		AgentChatMessage assistantMessage = messageRepository.save(AgentChatMessage.assistant(session.getId(), answer));
+		List<AgentChatMessageSource> sources = answer.sources()
+			.stream()
+			.map(source -> AgentChatMessageSource.from(assistantMessage.getId(), source))
+			.toList();
+		sourceRepository.saveAll(sources);
+		session.touch();
+
+		return assistantMessage;
+	}
+
+	private void sendEvent(SseEmitter emitter, String eventName, Object payload) {
+		try {
+			emitter.send(SseEmitter.event()
+				.name(eventName)
+				.data(payload));
+		}
+		catch (IOException exception) {
+			throw new AgentChatStreamException("Failed to send SSE event.", exception);
+		}
 	}
 
 	private AgentChatSession findOwnedSession(UUID userId, UUID sessionId) {
@@ -169,5 +298,21 @@ public class AgentChatService {
 		}
 
 		return value.substring(0, value.offsetByCodePoints(0, maxCodePoints));
+	}
+
+	private record StreamContext(
+		UUID sessionId,
+		UUID workspaceId,
+		UUID userMessageId,
+		String content,
+		Integer topK
+	) {
+	}
+
+	private static class AgentChatStreamException extends RuntimeException {
+
+		AgentChatStreamException(String message, Throwable cause) {
+			super(message, cause);
+		}
 	}
 }

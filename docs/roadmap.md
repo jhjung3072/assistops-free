@@ -131,9 +131,9 @@
 - `/rag` Q&A 화면, 답변 카드, 출처 목록, 답변 이력 조회/삭제 UI 구성
 - RAG 단계별 latency metrics 응답/저장/logging 구성
 - 기본 topK 3, context 길이 제한, Ollama `num_predict`/`temperature`/`top_p`/`keep_alive` 적용
-- 현재는 single-turn Q&A이며 streaming response는 후속 개선 후보
+- 현재는 single-turn Q&A이며 Agent Chat streaming은 Phase 7에서 진행
 
-## Phase 7: Agent Chat UI
+## Phase 7: Agent Chat UI & Streaming Response
 
 현재 진행 중인 단계입니다.
 
@@ -142,10 +142,13 @@
 - 기존 RAG Answer Service를 재사용한 assistant 답변 생성
 - assistant 답변의 source citation과 latency metrics 저장
 - `/agent` 채팅 화면, 이전 세션 목록, 메시지 타임라인 구성
+- `POST /api/agent/sessions/{id}/messages/stream` SSE endpoint 구성
+- fetch streaming 기반 assistant 답변 점진 렌더링
+- streaming 완료 후 assistant 메시지, 출처, latency metrics 저장
 - `/rag`는 단발성 Q&A, `/agent`는 세션형 채팅 UI로 역할 분리
 - 현재는 single-turn RAG 답변을 세션에 저장하는 구조
-- streaming response, multi-turn context memory, tool calling은 후속 개선 후보
-- 다음 단계 후보는 streaming response 또는 prompt versioning
+- WebSocket, Redis Pub/Sub, multi-turn context memory, tool calling은 후속 개선 후보
+- 다음 단계 후보는 prompt versioning 또는 tool calling foundation
 
 ## Phase 8: Workflow Builder
 

@@ -64,7 +64,9 @@
 | AI | Ollama generation options | `num_predict`, `temperature`, `top_p`, `keep_alive` 기반 로컬 응답 시간 튜닝 | 사용 중 |
 | AI | Agent Chat UI | RAG Answer를 세션형 채팅 UX로 표시 | 사용 중 |
 | AI | Chat session persistence | Agent session과 message history 저장 | 사용 중 |
-| AI | Streaming response | 응답 생성 스트리밍 | 예정 |
+| AI | SSE / fetch streaming | Agent Chat assistant 답변을 `text/event-stream`으로 점진 표시 | 사용 중 |
+| AI | WebSocket | 양방향 realtime agent event 처리 | 예정 |
+| AI | Redis Pub/Sub | 여러 worker 또는 클라이언트로 event fan-out | 예정 |
 | AI | Multi-turn context memory | 이전 대화 맥락을 prompt에 반영하는 구조 | 예정 |
 | AI | prompt versioning | 프롬프트 변경 이력 관리와 UI | 예정 |
 | AI | Tool calling | 내부 업무 액션 실행 구조 | 예정 |

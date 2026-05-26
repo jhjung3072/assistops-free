@@ -11,16 +11,27 @@ import {
   deleteAgentSession,
   getAgentSession,
   getAgentSessions,
-  sendAgentMessage,
+  sendAgentMessageStream,
 } from "@/features/agent/api/agent-api";
 import { AgentMessageInput } from "@/features/agent/components/agent-message-input";
 import { AgentMessageList } from "@/features/agent/components/agent-message-list";
 import { AgentSessionList } from "@/features/agent/components/agent-session-list";
 import { getApiErrorMessage } from "@/lib/api/client";
+import type {
+  AgentChatMessage,
+  AgentChatMessageSource,
+  AgentChatStreamError,
+} from "@/types/agent";
 
 export function AgentChatLayout() {
   const queryClient = useQueryClient();
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
+    null,
+  );
+  const [streamingMessages, setStreamingMessages] = useState<
+    AgentChatMessage[]
+  >([]);
+  const [streamErrorMessage, setStreamErrorMessage] = useState<string | null>(
     null,
   );
 
@@ -39,8 +50,8 @@ export function AgentChatLayout() {
     },
   });
 
-  const sendMutation = useMutation({
-    mutationFn: ({
+  const streamMutation = useMutation({
+    mutationFn: async ({
       sessionId,
       content,
       topK,
@@ -48,11 +59,123 @@ export function AgentChatLayout() {
       sessionId: string;
       content: string;
       topK: number;
-    }) => sendAgentMessage(sessionId, { content, topK }),
-    onSuccess: (session) => {
-      setSelectedSessionId(session.id);
-      queryClient.setQueryData(["agent", "sessions", session.id], session);
+    }) => {
+      const startedAt = new Date().toISOString();
+      const userMessageId = `optimistic-user-${Date.now()}`;
+      const assistantMessageId = `streaming-assistant-${Date.now()}`;
+
+      setStreamErrorMessage(null);
+      setStreamingMessages([
+        createOptimisticUserMessage(sessionId, userMessageId, content, startedAt),
+        createStreamingAssistantMessage(sessionId, assistantMessageId, startedAt),
+      ]);
+
+      await sendAgentMessageStream(sessionId, { content, topK }, {
+        onMetadata: (metadata) => {
+          setStreamingMessages((messages) =>
+            messages.map((message) => {
+              if (message.id === userMessageId) {
+                return {
+                  ...message,
+                  id: metadata.userMessageId,
+                };
+              }
+
+              if (message.id === assistantMessageId) {
+                return {
+                  ...message,
+                  model: metadata.model,
+                };
+              }
+
+              return message;
+            }),
+          );
+        },
+        onSource: (source) => {
+          setStreamingMessages((messages) =>
+            messages.map((message) => {
+              if (message.id !== assistantMessageId) {
+                return message;
+              }
+
+              const nextSource: AgentChatMessageSource = {
+                id: `${assistantMessageId}-source-${message.sources.length}`,
+                ...source,
+              };
+
+              return {
+                ...message,
+                sourceCount: message.sources.length + 1,
+                sources: [...message.sources, nextSource],
+              };
+            }),
+          );
+        },
+        onToken: (token) => {
+          setStreamingMessages((messages) =>
+            messages.map((message) =>
+              message.id === assistantMessageId
+                ? {
+                    ...message,
+                    content: `${message.content}${token.content}`,
+                  }
+                : message,
+            ),
+          );
+        },
+        onLatency: (latencyMetrics) => {
+          setStreamingMessages((messages) =>
+            messages.map((message) =>
+              message.id === assistantMessageId
+                ? {
+                    ...message,
+                    totalMs: latencyMetrics.totalMs,
+                    chatGenerationMs: latencyMetrics.chatGenerationMs,
+                    sourceCount: latencyMetrics.sourceCount,
+                    latencyMetrics,
+                  }
+                : message,
+            ),
+          );
+        },
+        onDone: (done) => {
+          setStreamingMessages((messages) =>
+            messages.map((message) =>
+              message.id === assistantMessageId
+                ? {
+                    ...message,
+                    id: done.assistantMessageId,
+                    ragAnswerId: done.ragAnswerId,
+                    isStreaming: false,
+                  }
+                : message,
+            ),
+          );
+        },
+        onError: (streamError: AgentChatStreamError) => {
+          setStreamErrorMessage(streamError.message);
+          setStreamingMessages((messages) =>
+            messages.map((message) =>
+              message.id === assistantMessageId
+                ? {
+                    ...message,
+                    isStreaming: false,
+                    error: streamError.message,
+                  }
+                : message,
+            ),
+          );
+        },
+      });
+
+      return sessionId;
+    },
+    onSuccess: (sessionId) => {
+      setSelectedSessionId(sessionId);
+      setStreamingMessages([]);
       queryClient.invalidateQueries({ queryKey: ["agent", "sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["agent", "sessions", sessionId] });
     },
   });
 
@@ -83,7 +206,7 @@ export function AgentChatLayout() {
     sessionsQuery.error ??
     sessionQuery.error ??
     createMutation.error ??
-    sendMutation.error ??
+    (streamErrorMessage ? null : streamMutation.error) ??
     deleteMutation.error;
 
   function handleSendMessage(content: string, topK: number) {
@@ -91,7 +214,7 @@ export function AgentChatLayout() {
       return;
     }
 
-    sendMutation.mutate({
+    streamMutation.mutate({
       sessionId: activeSessionId,
       content,
       topK,
@@ -107,7 +230,11 @@ export function AgentChatLayout() {
         isCreating={createMutation.isPending}
         isDeleting={deleteMutation.isPending}
         onCreateSession={() => createMutation.mutate()}
-        onSelectSession={setSelectedSessionId}
+        onSelectSession={(sessionId) => {
+          setStreamingMessages([]);
+          setStreamErrorMessage(null);
+          setSelectedSessionId(sessionId);
+        }}
         onDeleteSession={(sessionId) => deleteMutation.mutate(sessionId)}
       />
 
@@ -122,7 +249,7 @@ export function AgentChatLayout() {
               {selectedSession?.title ?? "세션을 선택해 주세요"}
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              세션형 UI로 질문과 RAG 답변을 저장합니다. 아직 이전 메시지를 LLM context로 재사용하지는 않습니다.
+              세션형 UI로 질문과 RAG 답변을 저장합니다. 답변은 fetch streaming으로 점진 표시되지만, 총 생성 시간은 로컬 모델 성능에 영향을 받습니다.
             </p>
           </div>
           {selectedSession ? (
@@ -131,6 +258,12 @@ export function AgentChatLayout() {
             </Badge>
           ) : null}
         </div>
+
+        {streamErrorMessage ? (
+          <Alert variant="destructive">
+            <AlertDescription>{streamErrorMessage}</AlertDescription>
+          </Alert>
+        ) : null}
 
         {error ? (
           <Alert variant="destructive">
@@ -143,13 +276,13 @@ export function AgentChatLayout() {
         {activeSessionId ? (
           <>
             <AgentMessageList
-              messages={messages}
+              messages={[...messages, ...streamingMessages]}
               isLoading={sessionQuery.isLoading}
-              isSending={sendMutation.isPending}
+              isSending={streamMutation.isPending}
             />
             <AgentMessageInput
               disabled={!activeSessionId}
-              isSending={sendMutation.isPending}
+              isSending={streamMutation.isPending}
               onSendMessage={handleSendMessage}
             />
           </>
@@ -170,4 +303,46 @@ export function AgentChatLayout() {
       </div>
     </section>
   );
+}
+
+function createOptimisticUserMessage(
+  sessionId: string,
+  id: string,
+  content: string,
+  createdAt: string,
+): AgentChatMessage {
+  return {
+    id,
+    sessionId,
+    role: "USER",
+    content,
+    ragAnswerId: null,
+    model: null,
+    totalMs: null,
+    chatGenerationMs: null,
+    sourceCount: 0,
+    createdAt,
+    sources: [],
+  };
+}
+
+function createStreamingAssistantMessage(
+  sessionId: string,
+  id: string,
+  createdAt: string,
+): AgentChatMessage {
+  return {
+    id,
+    sessionId,
+    role: "ASSISTANT",
+    content: "",
+    ragAnswerId: null,
+    model: null,
+    totalMs: null,
+    chatGenerationMs: null,
+    sourceCount: 0,
+    createdAt,
+    sources: [],
+    isStreaming: true,
+  };
 }

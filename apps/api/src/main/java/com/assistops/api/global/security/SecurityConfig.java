@@ -1,5 +1,6 @@
 package com.assistops.api.global.security;
 
+import jakarta.servlet.DispatcherType;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -41,6 +42,7 @@ public class SecurityConfig {
 			.formLogin(AbstractHttpConfigurer::disable)
 			.exceptionHandling(exception -> exception.authenticationEntryPoint(restAuthenticationEntryPoint))
 			.authorizeHttpRequests(auth -> auth
+				.dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
 				.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
 				.requestMatchers("/api/health", "/actuator/health").permitAll()

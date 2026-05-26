@@ -1,13 +1,17 @@
 package com.assistops.api.agent;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.assistops.api.document.Document;
@@ -21,7 +25,9 @@ import com.assistops.api.rag.RagAnswerResponse;
 import com.assistops.api.rag.RagAnswerSourceRepository;
 import com.assistops.api.rag.RagAnswerSourceResponse;
 import com.assistops.api.rag.RagAnswerService;
+import com.assistops.api.rag.RagAnswerStreamHandler;
 import com.assistops.api.rag.RagLatencyMetrics;
+import com.assistops.api.rag.search.ChunkSearchResult;
 import com.assistops.api.support.AbstractPostgresContainerTest;
 import com.assistops.api.workspace.WorkspaceMember;
 import com.assistops.api.workspace.WorkspaceMemberRepository;
@@ -89,6 +95,8 @@ class AgentChatControllerTest extends AbstractPostgresContainerTest {
 		ragAnswerRepository.deleteAll();
 		documentChunkRepository.deleteAll();
 		documentRepository.deleteAll();
+
+		given(ragAnswerService.modelName()).willReturn("llama3.2");
 	}
 
 	@Test
@@ -172,6 +180,105 @@ class AgentChatControllerTest extends AbstractPostgresContainerTest {
 		assertThat(messages.get(1).getRole()).isEqualTo(AgentChatRole.ASSISTANT);
 		assertThat(messages.get(1).getTotalMs()).isEqualTo(4200);
 		assertThat(messageSourceRepository.findByMessageIdOrderByCreatedAtAsc(messages.get(1).getId())).hasSize(1);
+	}
+
+	@Test
+	void streamMessageReturnsUnauthorizedWithoutAuthentication() throws Exception {
+		mockMvc.perform(post("/api/agent/sessions/{id}/messages/stream", UUID.randomUUID())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(Map.of(
+					"content", "AssistOps Free는 무엇인가요?",
+					"topK", 3
+				))))
+			.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void streamMessageStoresMessagesSourcesAndLatency() throws Exception {
+		RegisteredUser user = register();
+		String sessionId = createSession(user.accessToken(), null);
+		RagAnswerResponse answer = createRagAnswerResponse(user, "AssistOps Free는 로컬 RAG 플랫폼입니다.");
+		given(ragAnswerService.streamAnswer(any(), any(RagAnswerRequest.class), any(RagAnswerStreamHandler.class)))
+			.willAnswer(invocation -> {
+				RagAnswerStreamHandler handler = invocation.getArgument(2, RagAnswerStreamHandler.class);
+				RagAnswerSourceResponse source = answer.sources().getFirst();
+				handler.onSource(new ChunkSearchResult(
+					answer.workspaceId(),
+					source.documentId(),
+					source.documentName(),
+					source.chunkId(),
+					source.chunkIndex(),
+					source.content(),
+					source.score(),
+					0.08,
+					"nomic-embed-text"
+				));
+				handler.onToken("AssistOps ");
+				handler.onToken("Free");
+				return answer;
+			});
+
+		MvcResult result = mockMvc.perform(post("/api/agent/sessions/{id}/messages/stream", sessionId)
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + user.accessToken())
+				.accept(MediaType.TEXT_EVENT_STREAM)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(Map.of(
+					"content", "AssistOps Free는 무엇인가요?",
+					"topK", 3
+				))))
+			.andExpect(request().asyncStarted())
+			.andReturn();
+		result.getAsyncResult(5_000);
+
+		MvcResult dispatched = mockMvc.perform(asyncDispatch(result))
+			.andExpect(status().isOk())
+			.andExpect(header().string(HttpHeaders.CONTENT_TYPE, containsString(MediaType.TEXT_EVENT_STREAM_VALUE)))
+			.andExpect(content().string(containsString("event:metadata")))
+			.andExpect(content().string(containsString("event:source")))
+			.andExpect(content().string(containsString("event:token")))
+			.andExpect(content().string(containsString("AssistOps ")))
+			.andExpect(content().string(containsString("event:latency")))
+			.andExpect(content().string(containsString("event:done")))
+			.andReturn();
+
+		assertThat(dispatched.getResponse().getContentAsString()).contains("assistantMessageId");
+		List<AgentChatMessage> messages = messageRepository.findBySessionIdOrderByCreatedAtAscIdAsc(UUID.fromString(sessionId));
+		assertThat(messages).hasSize(2);
+		assertThat(messages.get(0).getRole()).isEqualTo(AgentChatRole.USER);
+		assertThat(messages.get(1).getRole()).isEqualTo(AgentChatRole.ASSISTANT);
+		assertThat(messages.get(1).getContent()).isEqualTo("AssistOps Free는 로컬 RAG 플랫폼입니다.");
+		assertThat(messages.get(1).getTotalMs()).isEqualTo(4200);
+		assertThat(messages.get(1).getChatGenerationMs()).isEqualTo(3900);
+		assertThat(messageSourceRepository.findByMessageIdOrderByCreatedAtAsc(messages.get(1).getId())).hasSize(1);
+	}
+
+	@Test
+	void streamMessageSendsErrorEventWhenRagFails() throws Exception {
+		RegisteredUser user = register();
+		String sessionId = createSession(user.accessToken(), null);
+		given(ragAnswerService.streamAnswer(any(), any(RagAnswerRequest.class), any(RagAnswerStreamHandler.class)))
+			.willThrow(new RuntimeException("ollama unavailable"));
+
+		MvcResult result = mockMvc.perform(post("/api/agent/sessions/{id}/messages/stream", sessionId)
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + user.accessToken())
+				.accept(MediaType.TEXT_EVENT_STREAM)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(Map.of(
+					"content", "실패 테스트",
+					"topK", 3
+				))))
+			.andExpect(request().asyncStarted())
+			.andReturn();
+		result.getAsyncResult(5_000);
+
+		mockMvc.perform(asyncDispatch(result))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("event:error")))
+			.andExpect(content().string(containsString("\"message\"")));
+
+		List<AgentChatMessage> messages = messageRepository.findBySessionIdOrderByCreatedAtAscIdAsc(UUID.fromString(sessionId));
+		assertThat(messages).hasSize(1);
+		assertThat(messages.getFirst().getRole()).isEqualTo(AgentChatRole.USER);
 	}
 
 	@Test

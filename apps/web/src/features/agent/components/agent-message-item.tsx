@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, UserRound } from "lucide-react";
+import { Bot, Loader2, UserRound } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -54,12 +54,27 @@ export function AgentMessageItem({ message }: AgentMessageItemProps) {
             <Badge variant="outline">
               sources {message.sourceCount ?? message.sources.length}
             </Badge>
+            {message.isStreaming ? (
+              <Badge variant="outline">streaming</Badge>
+            ) : null}
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4">
-          <p className="whitespace-pre-wrap text-sm leading-7">
-            {message.content}
-          </p>
+          {message.error ? (
+            <p className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              {message.error}
+            </p>
+          ) : null}
+          {message.content ? (
+            <p className="whitespace-pre-wrap text-sm leading-7">
+              {message.content}
+            </p>
+          ) : (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+              로컬 LLM이 답변을 생성하고 있습니다...
+            </p>
+          )}
           <AgentSourceList sources={message.sources} />
         </CardContent>
       </Card>

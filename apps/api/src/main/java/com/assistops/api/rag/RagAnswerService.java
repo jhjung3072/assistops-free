@@ -49,6 +49,23 @@ public class RagAnswerService {
 
 	@Transactional
 	public RagAnswerResponse answer(User user, RagAnswerRequest request) {
+		return answerInternal(user, request, null);
+	}
+
+	@Transactional
+	public RagAnswerResponse streamAnswer(
+		User user,
+		RagAnswerRequest request,
+		RagAnswerStreamHandler streamHandler
+	) {
+		return answerInternal(user, request, streamHandler);
+	}
+
+	private RagAnswerResponse answerInternal(
+		User user,
+		RagAnswerRequest request,
+		RagAnswerStreamHandler streamHandler
+	) {
 		long totalStart = System.nanoTime();
 		String stage = "resolveTopK";
 
@@ -62,11 +79,12 @@ public class RagAnswerService {
 			);
 			List<ChunkSearchResult> results = searchResult.response().results();
 			UUID workspaceId = resolveAnswerWorkspaceId(user.getId(), request.workspaceId(), results);
+			if (streamHandler != null) {
+				results.forEach(streamHandler::onSource);
+			}
 
 			stage = "generation";
-			RagGenerationResult generationResult = results.isEmpty()
-				? new RagGenerationResult(INSUFFICIENT_CONTEXT_ANSWER, 0, 0, 0)
-				: ragGenerationService.generateAnswer(request.question(), results);
+			RagGenerationResult generationResult = generateAnswer(request, results, streamHandler);
 
 			stage = "persist";
 			long persistStart = System.nanoTime();
@@ -128,6 +146,30 @@ public class RagAnswerService {
 		}
 	}
 
+	private RagGenerationResult generateAnswer(
+		RagAnswerRequest request,
+		List<ChunkSearchResult> results,
+		RagAnswerStreamHandler streamHandler
+	) {
+		if (results.isEmpty()) {
+			if (streamHandler != null) {
+				streamHandler.onToken(INSUFFICIENT_CONTEXT_ANSWER);
+			}
+
+			return new RagGenerationResult(INSUFFICIENT_CONTEXT_ANSWER, 0, 0, 0);
+		}
+
+		if (streamHandler != null) {
+			return ragGenerationService.generateAnswerStream(
+				request.question(),
+				results,
+				streamHandler::onToken
+			);
+		}
+
+		return ragGenerationService.generateAnswer(request.question(), results);
+	}
+
 	@Transactional(readOnly = true)
 	public RagAnswerListResponse getAnswers(User user) {
 		List<UUID> workspaceIds = accessibleWorkspaceIds(user.getId());
@@ -141,6 +183,10 @@ public class RagAnswerService {
 			.toList();
 
 		return new RagAnswerListResponse(answers);
+	}
+
+	public String modelName() {
+		return ragGenerationService.modelName();
 	}
 
 	@Transactional(readOnly = true)

@@ -7,6 +7,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.UUID;
+import org.springframework.http.CacheControl;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -16,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Tag(name = "Agent Chat")
 @RestController
@@ -60,6 +64,23 @@ public class AgentChatController {
 		@Valid @RequestBody AgentChatMessageRequest request
 	) {
 		return agentChatService.sendMessage(currentUser(userDetails), id, request);
+	}
+
+	@Operation(summary = "Stream agent chat message")
+	@PostMapping(value = "/{id}/messages/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+	public ResponseEntity<SseEmitter> streamMessage(
+		@AuthenticationPrincipal CustomUserDetails userDetails,
+		@PathVariable UUID id,
+		@Valid @RequestBody AgentChatMessageRequest request
+	) {
+		SseEmitter emitter = agentChatService.streamMessage(currentUser(userDetails), id, request);
+
+		return ResponseEntity.ok()
+			.contentType(MediaType.TEXT_EVENT_STREAM)
+			.cacheControl(CacheControl.noCache())
+			.header(HttpHeaders.CONNECTION, "keep-alive")
+			.header("X-Accel-Buffering", "no")
+			.body(emitter);
 	}
 
 	@Operation(summary = "Delete agent chat session")

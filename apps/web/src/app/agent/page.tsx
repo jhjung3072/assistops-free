@@ -18,7 +18,7 @@ export default function AgentPage() {
             </Badge>
             <h1 className="text-3xl font-semibold sm:text-4xl">Agent</h1>
             <p className="mt-3 text-muted-foreground">
-              기존 RAG Answer 기능을 세션형 채팅 UX로 사용합니다. streaming, multi-turn memory, tool calling은 후속 단계입니다.
+              기존 RAG Answer 기능을 세션형 채팅 UX로 사용합니다. assistant 답변은 streaming으로 표시되며, multi-turn memory와 tool calling은 후속 단계입니다.
             </p>
           </section>
 
