@@ -21,8 +21,8 @@
 
 | 영역               | 기술                                                                                                                                            | 현재 상태 |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| Frontend           | Next.js App Router, React, TypeScript, Tailwind CSS                                                                                             | 사용 중   |
-| Frontend           | shadcn/ui, Radix UI, TanStack Query, Zustand, React Hook Form, Zod, React Flow, Recharts, Playwright                                            | 예정      |
+| Frontend           | Next.js App Router, React, TypeScript, Tailwind CSS, shadcn/ui                                                                                  | 사용 중   |
+| Frontend           | Radix UI, TanStack Query, Zustand, React Hook Form, Zod, React Flow, Recharts, Playwright                                                       | 예정      |
 | Backend            | Java 21, Spring Boot, Spring Security, Spring AI, Spring Data JPA, Querydsl, Springdoc OpenAPI                                                  | 예정      |
 | AI                 | Ollama, qwen2.5-coder 또는 llama3.2 계열 로컬 모델, local embedding model, RAG pipeline, prompt versioning, tool calling style internal actions | 예정      |
 | Database / Storage | PostgreSQL, pgvector, Redis, MinIO                                                                                                              | 예정      |
@@ -32,6 +32,7 @@
 ## 현재 구현 상태
 
 - `apps/web`: Next.js App Router 기반 프론트엔드 프로젝트 생성 완료
+- `apps/web`: shadcn/ui 초기화 및 기본 UI 컴포넌트 일부 적용
 - 루트 `pnpm-workspace.yaml`: `apps/web` workspace 등록
 - 루트 `package.json`: 프론트엔드 실행, 빌드, 린트 스크립트 추가
 - 프론트엔드 주요 라이브러리: 의존성 설치 완료, 실제 기능 적용은 예정

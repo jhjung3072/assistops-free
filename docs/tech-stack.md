@@ -8,8 +8,9 @@
 | Frontend | React | UI 컴포넌트 개발 | 사용 중 |
 | Frontend | TypeScript | 정적 타입 기반 프론트엔드 개발 | 사용 중 |
 | Frontend | Tailwind CSS | 유틸리티 기반 스타일링 | 사용 중 |
-| Frontend | shadcn/ui | 재사용 가능한 UI 컴포넌트 기반 | 예정 |
-| Frontend | Radix UI | 접근성 기반 headless UI primitive | 예정 |
+| Frontend | shadcn/ui | 재사용 가능한 UI 컴포넌트 기반 | 사용 중 |
+| Frontend | Base UI | 현재 shadcn/ui preset의 headless UI 기반 | 사용 중 |
+| Frontend | Radix UI | shadcn/ui 컴포넌트 확장 시 사용할 수 있는 headless UI primitive | 예정 |
 | Frontend | TanStack Query | 서버 상태 관리와 API 캐싱 | 예정 |
 | Frontend | Zustand | 클라이언트 상태 관리 | 예정 |
 | Frontend | React Hook Form | 폼 상태 관리 | 예정 |

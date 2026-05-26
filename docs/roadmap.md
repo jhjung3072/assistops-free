@@ -8,6 +8,7 @@
 
 - 루트 workspace 구성
 - `apps/web` Next.js App Router 프로젝트 정리
+- Frontend App Foundation 진행 중
 - README와 docs 기반 문서화
 - 기본 랜딩 화면 구성
 - 프론트엔드 주요 라이브러리 설치
