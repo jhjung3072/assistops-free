@@ -27,6 +27,10 @@ const navItems = [
     href: "/search",
   },
   {
+    label: "RAG",
+    href: "/rag",
+  },
+  {
     label: "Roadmap",
     href: "/roadmap",
   },

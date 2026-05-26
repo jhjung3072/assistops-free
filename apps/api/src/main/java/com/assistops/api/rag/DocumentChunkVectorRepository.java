@@ -43,6 +43,7 @@ public class DocumentChunkVectorRepository {
 	) {
 		String sql = """
 			SELECT
+			    c.workspace_id,
 			    c.document_id,
 			    d.original_filename AS document_name,
 			    c.id AS chunk_id,
@@ -66,6 +67,7 @@ public class DocumentChunkVectorRepository {
 			.addValue("topK", topK);
 
 		return jdbcTemplate.query(sql, parameters, (resultSet, rowNumber) -> new ChunkSearchRow(
+			resultSet.getObject("workspace_id", UUID.class),
 			resultSet.getObject("document_id", UUID.class),
 			resultSet.getString("document_name"),
 			resultSet.getObject("chunk_id", UUID.class),
@@ -91,6 +93,7 @@ public class DocumentChunkVectorRepository {
 	}
 
 	public record ChunkSearchRow(
+		UUID workspaceId,
 		UUID documentId,
 		String documentName,
 		UUID chunkId,

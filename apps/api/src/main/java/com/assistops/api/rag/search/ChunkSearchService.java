@@ -37,18 +37,31 @@ public class ChunkSearchService {
 
 	@Transactional(readOnly = true)
 	public ChunkSearchResponse search(User user, ChunkSearchRequest request) {
+		return searchWithMetrics(user, request).response();
+	}
+
+	@Transactional(readOnly = true)
+	public ChunkSearchResultWithMetrics searchWithMetrics(User user, ChunkSearchRequest request) {
 		List<UUID> workspaceIds = resolveWorkspaceIds(user.getId(), request.workspaceId());
 		int topK = request.topK() == null ? DEFAULT_TOP_K : request.topK();
+		long queryEmbeddingStart = System.nanoTime();
 		float[] queryEmbedding = embeddingService.embedQuery(request.query());
+		long queryEmbeddingMs = elapsedMs(queryEmbeddingStart);
 		validateDimension(queryEmbedding);
 
+		long vectorSearchStart = System.nanoTime();
 		List<ChunkSearchResult> results = documentChunkVectorRepository
 			.searchSimilarChunks(workspaceIds, queryEmbedding, topK)
 			.stream()
 			.map(ChunkSearchResult::from)
 			.toList();
+		long vectorSearchMs = elapsedMs(vectorSearchStart);
 
-		return new ChunkSearchResponse(request.query(), topK, results);
+		return new ChunkSearchResultWithMetrics(
+			new ChunkSearchResponse(request.query(), topK, results),
+			queryEmbeddingMs,
+			vectorSearchMs
+		);
 	}
 
 	private List<UUID> resolveWorkspaceIds(UUID userId, UUID requestedWorkspaceId) {
@@ -82,5 +95,16 @@ public class ChunkSearchService {
 					+ "."
 			);
 		}
+	}
+
+	private long elapsedMs(long startedAt) {
+		return (System.nanoTime() - startedAt) / 1_000_000L;
+	}
+
+	public record ChunkSearchResultWithMetrics(
+		ChunkSearchResponse response,
+		long queryEmbeddingMs,
+		long vectorSearchMs
+	) {
 	}
 }

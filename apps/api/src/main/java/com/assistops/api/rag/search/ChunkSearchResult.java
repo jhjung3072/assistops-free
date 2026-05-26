@@ -4,6 +4,7 @@ import com.assistops.api.rag.DocumentChunkVectorRepository;
 import java.util.UUID;
 
 public record ChunkSearchResult(
+	UUID workspaceId,
 	UUID documentId,
 	String documentName,
 	UUID chunkId,
@@ -16,6 +17,7 @@ public record ChunkSearchResult(
 
 	public static ChunkSearchResult from(DocumentChunkVectorRepository.ChunkSearchRow row) {
 		return new ChunkSearchResult(
+			row.workspaceId(),
 			row.documentId(),
 			row.documentName(),
 			row.chunkId(),

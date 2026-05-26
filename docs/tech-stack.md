@@ -38,7 +38,7 @@
 | Backend | JWT Bearer Auth | JSON body로 발급한 accessToken을 Authorization Bearer header로 인증 | 사용 중 |
 | Backend | BCrypt | 사용자 password hashing | 사용 중 |
 | Backend | RBAC | workspace membership 기반 권한 모델 | 기반 구성 |
-| Backend | Spring AI Ollama | 로컬 Ollama embedding model 호출 | 사용 중 |
+| Backend | Spring AI Ollama | 로컬 Ollama embedding/chat model 호출 | 사용 중 |
 | Backend | Querydsl | 타입 안전 동적 쿼리 | 예정 |
 | Backend | Springdoc OpenAPI UI | API 문서화와 Swagger UI | 사용 중 |
 | Backend | Backend DB integration | Spring Boot와 PostgreSQL 연결 | 사용 중 |
@@ -50,13 +50,20 @@
 | Backend | Document Chunking | RAG 준비용 문자 수 기반 chunk 저장 | 사용 중 |
 | Backend | Document Embedding | document chunk content를 vector로 변환해 저장 | 사용 중 |
 | Backend | Semantic Chunk Search | query embedding 기준 유사 chunk 검색 | 사용 중 |
-| AI | Ollama | 로컬 embedding model 실행 | embedding 연동 사용 중 |
-| AI | qwen2.5-coder 또는 llama3.2 | 로컬 LLM 후보 모델 | 검토 |
+| Backend | RAG Answer API | semantic search 결과를 context로 답변 생성 | 사용 중 |
+| Backend | RAG latency metrics | query embedding, vector search, prompt build, chat generation, persist 단계별 측정 | 사용 중 |
+| Backend | Source Citation | 답변 출처 chunk 저장과 응답 표시 | 사용 중 |
+| AI | Ollama | 로컬 embedding/chat model 실행 | 사용 중 |
+| AI | qwen2.5-coder | 로컬 LLM 후보 모델 | 검토 |
 | AI | nomic-embed-text | 기본 local embedding model, 768 dimension | 사용 중 |
+| AI | llama3.2 | 기본 local chat model | 사용 중 |
 | AI | pgvector similarity search | chunk embedding cosine distance 검색 | 사용 중 |
-| AI | RAG answer generation | 검색 결과 기반 LLM 답변 생성 | 예정 |
-| AI | RAG pipeline | embedding, 검색 증강 생성 흐름 | 기반 구성, 답변 생성 예정 |
-| AI | prompt versioning | 프롬프트 변경 이력 관리 | 예정 |
+| AI | RAG answer generation | 검색 결과 기반 LLM 답변 생성 | 사용 중 |
+| AI | RAG pipeline | embedding, 검색 증강 생성 흐름 | 기본 구성 |
+| AI | Ollama generation options | `num_predict`, `temperature`, `top_p`, `keep_alive` 기반 로컬 응답 시간 튜닝 | 사용 중 |
+| AI | Streaming response | 응답 생성 스트리밍 | 예정 |
+| AI | Agent Chat | multi-turn 문서 기반 대화 | 예정 |
+| AI | prompt versioning | 프롬프트 변경 이력 관리와 UI | 예정 |
 | AI | tool calling style internal actions | 내부 업무 액션 실행 구조 | 예정 |
 | Database / Storage | PostgreSQL | 주요 업무 데이터 저장. Docker named volume 사용 | 로컬 인프라 구성 및 API 연결 |
 | Database / Storage | pgvector | `document_chunks.embedding vector(768)` 저장과 유사도 검색 | 사용 중 |

@@ -23,9 +23,17 @@ spring:
           time_zone: UTC
   ai:
     model:
+      chat: ollama
       embedding: ollama
     ollama:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      chat:
+        options:
+          model: ${OLLAMA_CHAT_MODEL:llama3.2}
+          num-predict: ${OLLAMA_CHAT_NUM_PREDICT:256}
+          temperature: ${OLLAMA_CHAT_TEMPERATURE:0.2}
+          top-p: ${OLLAMA_CHAT_TOP_P:0.9}
+          keep-alive: ${OLLAMA_CHAT_KEEP_ALIVE:30m}
       embedding:
         options:
           model: ${OLLAMA_EMBEDDING_MODEL:nomic-embed-text}
@@ -71,3 +79,14 @@ rag:
   embedding:
     model: ${OLLAMA_EMBEDDING_MODEL:nomic-embed-text}
     dimension: 768
+  generation:
+    chat-model: ${OLLAMA_CHAT_MODEL:llama3.2}
+    default-top-k: ${RAG_DEFAULT_TOP_K:3}
+    min-top-k: ${RAG_MIN_TOP_K:1}
+    max-top-k: ${RAG_MAX_TOP_K:8}
+    context-chunk-max-chars: ${RAG_CONTEXT_CHUNK_MAX_CHARS:800}
+    context-total-max-chars: ${RAG_CONTEXT_TOTAL_MAX_CHARS:3000}
+    num-predict: ${OLLAMA_CHAT_NUM_PREDICT:256}
+    temperature: ${OLLAMA_CHAT_TEMPERATURE:0.2}
+    top-p: ${OLLAMA_CHAT_TOP_P:0.9}
+    keep-alive: ${OLLAMA_CHAT_KEEP_ALIVE:30m}

@@ -6,6 +6,7 @@ import {
   FileSearch,
   FileText,
   LogOut,
+  MessageSquareText,
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
@@ -146,6 +147,26 @@ export default function DashboardPage() {
                 className={buttonVariants({ variant: "outline" })}
               >
                 문서 검색으로 이동
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquareText aria-hidden="true" />
+                문서 기반 AI 질문
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                검색된 문서 chunk를 근거로 Ollama local chat model이 답변합니다.
+              </p>
+              <Link
+                href="/rag"
+                className={buttonVariants({ variant: "outline" })}
+              >
+                문서 기반 AI 질문하기
               </Link>
             </CardContent>
           </Card>

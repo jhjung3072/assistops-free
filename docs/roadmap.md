@@ -107,7 +107,7 @@
 
 ## Phase 5: Embedding & Vector Search Foundation
 
-현재 진행 중인 단계입니다.
+기본 기반 구성을 마친 단계입니다.
 
 - Spring AI Ollama 기반 `nomic-embed-text` embedding model 연동
 - `document_chunks.embedding vector(768)` 저장
@@ -116,17 +116,22 @@
 - pgvector cosine distance 기반 semantic chunk search API `POST /api/search/chunks` 구현
 - `/documents` 화면에서 Embed 버튼과 embedding 상태 표시
 - `/search` 화면에서 query 기반 유사 chunk 검색 결과 표시
-- Redis queue 기반 비동기 embedding 처리와 RAG 답변 생성은 후속 작업으로 유지
+- RAG 답변 생성은 Phase 6에서 진행
 
-## Phase 6: RAG Answer API
+## Phase 6: RAG Answer API & Q&A UI
 
-향후 구현 예정입니다.
+현재 진행 중인 단계입니다.
 
-- semantic search 결과를 context로 사용하는 답변 생성 API
-- Ollama chat model integration
-- prompt versioning 구조
-- 검색 결과 출처 포함
-- streaming response는 후속 개선 후보
+- semantic search 결과를 context로 사용하는 답변 생성 API `POST /api/rag/answer` 구현
+- Ollama `llama3.2` chat model integration
+- context 기반 한국어 답변 prompt 구성
+- `rag_answers`, `rag_answer_sources` 이력 저장
+- 답변 출처 chunk citation 포함
+- RAG 답변 목록/상세/삭제 API 구현
+- `/rag` Q&A 화면, 답변 카드, 출처 목록, 답변 이력 조회/삭제 UI 구성
+- RAG 단계별 latency metrics 응답/저장/logging 구성
+- 기본 topK 3, context 길이 제한, Ollama `num_predict`/`temperature`/`top_p`/`keep_alive` 적용
+- 현재는 single-turn Q&A이며 streaming response는 후속 개선 후보
 
 ## Phase 7: Agent Chat UI
 
@@ -136,6 +141,7 @@
 - RAG 출처 표시
 - internal action 실행 결과 표시
 - 대화 이력 관리
+- streaming response 또는 multi-turn context는 이 단계에서 검토
 
 ## Phase 8: Workflow Builder
 
