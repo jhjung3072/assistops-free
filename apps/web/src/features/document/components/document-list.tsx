@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, FileText, Trash2 } from "lucide-react";
+import { Download, Eye, FileText, Play, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -17,11 +17,20 @@ import {
   deleteDocument,
   downloadDocument,
   getDocuments,
+  processDocument,
 } from "@/features/document/api/document-api";
 import { getApiErrorMessage } from "@/lib/api/client";
 import type { Document as DocumentItem } from "@/types/document";
 
-export function DocumentList() {
+type DocumentListProps = {
+  selectedDocumentId: string | null;
+  onSelectDocument: (documentId: string) => void;
+};
+
+export function DocumentList({
+  selectedDocumentId,
+  onSelectDocument,
+}: DocumentListProps) {
   const queryClient = useQueryClient();
   const [downloadError, setDownloadError] = useState<unknown>(null);
 
@@ -38,7 +47,21 @@ export function DocumentList() {
     },
   });
 
+  const processMutation = useMutation({
+    mutationFn: processDocument,
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
+      queryClient.invalidateQueries({
+        queryKey: ["documents", response.document.id, "chunks"],
+      });
+      onSelectDocument(response.document.id);
+    },
+  });
+
   const documents = documentsQuery.data?.documents ?? [];
+  const processingDocumentId = processMutation.isPending
+    ? processMutation.variables
+    : null;
 
   async function handleDownload(document: DocumentItem) {
     setDownloadError(null);
@@ -82,6 +105,17 @@ export function DocumentList() {
             {getApiErrorMessage(
               deleteMutation.error,
               "문서를 삭제하지 못했습니다.",
+            )}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {processMutation.isError ? (
+        <Alert variant="destructive">
+          <AlertDescription>
+            {getApiErrorMessage(
+              processMutation.error,
+              "문서를 처리하지 못했습니다.",
             )}
           </AlertDescription>
         </Alert>
@@ -133,7 +167,11 @@ export function DocumentList() {
                 <div>
                   <dt className="text-muted-foreground">상태</dt>
                   <dd className="mt-1">
-                    <Badge variant="secondary">{document.status}</Badge>
+                    <Badge variant={statusBadgeVariant(document.status)}>
+                      {processingDocumentId === document.id
+                        ? "PROCESSING"
+                        : document.status}
+                    </Badge>
                   </dd>
                 </div>
                 <div>
@@ -142,9 +180,56 @@ export function DocumentList() {
                     {new Date(document.createdAt).toLocaleString()}
                   </dd>
                 </div>
+                <div>
+                  <dt className="text-muted-foreground">Chunks</dt>
+                  <dd className="mt-1 font-medium">{document.chunkCount}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">처리 완료</dt>
+                  <dd className="mt-1 font-medium">
+                    {document.processedAt
+                      ? new Date(document.processedAt).toLocaleString()
+                      : "-"}
+                  </dd>
+                </div>
               </dl>
 
+              {document.processingError ? (
+                <Alert variant="destructive">
+                  <AlertDescription>
+                    {document.processingError}
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+
               <div className="flex flex-wrap gap-2 lg:justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => processMutation.mutate(document.id)}
+                  disabled={
+                    processMutation.isPending ||
+                    document.status === "DELETED" ||
+                    processingDocumentId === document.id
+                  }
+                >
+                  <Play aria-hidden="true" />
+                  {processingDocumentId === document.id ? "처리 중" : "Process"}
+                </Button>
+                {document.status === "PROCESSED" ? (
+                  <Button
+                    variant={
+                      selectedDocumentId === document.id
+                        ? "secondary"
+                        : "outline"
+                    }
+                    size="sm"
+                    onClick={() => onSelectDocument(document.id)}
+                  >
+                    <Eye aria-hidden="true" />
+                    View Chunks
+                  </Button>
+                ) : null}
                 <Button
                   variant="outline"
                   size="sm"
@@ -169,6 +254,20 @@ export function DocumentList() {
       ))}
     </section>
   );
+}
+
+function statusBadgeVariant(
+  status: DocumentItem["status"],
+): "destructive" | "secondary" | "outline" {
+  if (status === "FAILED") {
+    return "destructive";
+  }
+
+  if (status === "PROCESSED") {
+    return "secondary";
+  }
+
+  return "outline";
 }
 
 function formatBytes(bytes: number) {

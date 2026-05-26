@@ -1,6 +1,7 @@
 package com.assistops.api.global.exception;
 
 import com.assistops.api.document.storage.DocumentStorageException;
+import com.assistops.api.document.processing.DocumentProcessingException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -76,6 +77,12 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(DocumentStorageException.class)
 	public ResponseEntity<ErrorResponse> handleDocumentStorage(DocumentStorageException exception) {
+		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+			.body(ErrorResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, exception.getMessage()));
+	}
+
+	@ExceptionHandler(DocumentProcessingException.class)
+	public ResponseEntity<ErrorResponse> handleDocumentProcessing(DocumentProcessingException exception) {
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 			.body(ErrorResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, exception.getMessage()));
 	}

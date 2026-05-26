@@ -29,9 +29,14 @@ import org.springframework.web.multipart.MultipartFile;
 public class DocumentController {
 
 	private final DocumentService documentService;
+	private final DocumentProcessingService documentProcessingService;
 
-	public DocumentController(DocumentService documentService) {
+	public DocumentController(
+		DocumentService documentService,
+		DocumentProcessingService documentProcessingService
+	) {
 		this.documentService = documentService;
+		this.documentProcessingService = documentProcessingService;
 	}
 
 	@Operation(summary = "Upload document")
@@ -83,6 +88,24 @@ public class DocumentController {
 					.toString()
 			)
 			.body(new InputStreamResource(download.inputStream()));
+	}
+
+	@Operation(summary = "Process document")
+	@PostMapping("/{id}/process")
+	public DocumentProcessingResponse process(
+		@AuthenticationPrincipal CustomUserDetails userDetails,
+		@PathVariable UUID id
+	) {
+		return documentProcessingService.process(currentUser(userDetails), id);
+	}
+
+	@Operation(summary = "List document chunks")
+	@GetMapping("/{id}/chunks")
+	public DocumentChunkListResponse chunks(
+		@AuthenticationPrincipal CustomUserDetails userDetails,
+		@PathVariable UUID id
+	) {
+		return documentProcessingService.getChunks(currentUser(userDetails), id);
 	}
 
 	@Operation(summary = "Delete document")

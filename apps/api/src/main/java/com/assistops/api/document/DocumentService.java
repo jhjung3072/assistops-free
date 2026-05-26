@@ -65,7 +65,7 @@ public class DocumentService {
 	public DocumentListResponse getDocuments(User user) {
 		List<UUID> workspaceIds = accessibleWorkspaceIds(user.getId());
 		List<DocumentResponse> documents = documentRepository
-			.findByWorkspaceIdInAndStatusOrderByCreatedAtDesc(workspaceIds, DocumentStatus.UPLOADED)
+			.findByWorkspaceIdInAndStatusNotOrderByCreatedAtDesc(workspaceIds, DocumentStatus.DELETED)
 			.stream()
 			.map(DocumentResponse::from)
 			.toList();

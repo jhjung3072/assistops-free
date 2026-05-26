@@ -44,11 +44,15 @@
 | Backend | Backend DB integration | Spring Boot와 PostgreSQL 연결 | 사용 중 |
 | Backend | MinIO Java SDK | S3-compatible object storage 업로드/다운로드/삭제 | 사용 중 |
 | Backend | Document Upload | 원본 문서 저장과 메타데이터 관리 | 사용 중 |
-| Backend | Apache Tika / PDFBox | 문서 텍스트 추출 후보 | 예정 또는 검토 |
+| Backend | Apache Tika | PDF/TXT/MD 문서 텍스트 추출 | 사용 중 |
+| Backend | PDFBox | Apache Tika parser package의 전이 의존성으로 사용. 직접 의존성은 추가하지 않음 | 간접 사용 |
+| Backend | Document Parsing | 원본 문서에서 텍스트 추출 | 사용 중 |
+| Backend | Document Chunking | RAG 준비용 문자 수 기반 chunk 저장 | 사용 중 |
 | AI | Ollama | 로컬 LLM 실행 | 로컬 인프라 구성, 앱 미연동 |
 | AI | qwen2.5-coder 또는 llama3.2 | 로컬 LLM 후보 모델 | 검토 |
 | AI | local embedding model | 문서 임베딩 생성 | 예정 |
-| AI | RAG pipeline | 문서 chunking, embedding, 검색 증강 생성 흐름 | 예정 |
+| AI | pgvector similarity search | chunk embedding 유사도 검색 | 예정 |
+| AI | RAG pipeline | embedding, 검색 증강 생성 흐름 | 예정 |
 | AI | prompt versioning | 프롬프트 변경 이력 관리 | 예정 |
 | AI | tool calling style internal actions | 내부 업무 액션 실행 구조 | 예정 |
 | Database / Storage | PostgreSQL | 주요 업무 데이터 저장. Docker named volume 사용 | 로컬 인프라 구성 및 API 연결 |

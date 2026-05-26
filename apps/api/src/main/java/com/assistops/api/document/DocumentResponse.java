@@ -11,6 +11,9 @@ public record DocumentResponse(
 	String contentType,
 	long sizeBytes,
 	DocumentStatus status,
+	int chunkCount,
+	Instant processedAt,
+	String processingError,
 	Instant createdAt,
 	Instant updatedAt
 ) {
@@ -24,6 +27,9 @@ public record DocumentResponse(
 			document.getContentType(),
 			document.getSizeBytes(),
 			document.getStatus(),
+			document.getChunkCount(),
+			document.getProcessedAt(),
+			document.getProcessingError(),
 			document.getCreatedAt(),
 			document.getUpdatedAt()
 		);

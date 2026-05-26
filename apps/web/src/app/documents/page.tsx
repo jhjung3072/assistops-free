@@ -1,13 +1,20 @@
 "use client";
 
+import { useState } from "react";
+
 import { AppHeader } from "@/components/layout/app-header";
 import { AppShell } from "@/components/layout/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { AuthGuard } from "@/features/auth/components/auth-guard";
+import { DocumentChunkList } from "@/features/document/components/document-chunk-list";
 import { DocumentList } from "@/features/document/components/document-list";
 import { DocumentUploadForm } from "@/features/document/components/document-upload-form";
 
 export default function DocumentsPage() {
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
+    null,
+  );
+
   return (
     <>
       <AppHeader />
@@ -24,7 +31,11 @@ export default function DocumentsPage() {
           </section>
 
           <DocumentUploadForm />
-          <DocumentList />
+          <DocumentList
+            selectedDocumentId={selectedDocumentId}
+            onSelectDocument={setSelectedDocumentId}
+          />
+          <DocumentChunkList documentId={selectedDocumentId} />
         </AuthGuard>
       </AppShell>
     </>

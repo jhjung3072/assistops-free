@@ -2,7 +2,9 @@ import { apiRequest, apiRequestBlob } from "@/lib/api/client";
 import type { ApiResponse } from "@/types/api";
 import type {
   Document,
+  DocumentChunkListResponse,
   DocumentListResponse,
+  DocumentProcessingResponse,
   DocumentUploadResponse,
 } from "@/types/document";
 
@@ -41,4 +43,19 @@ export function deleteDocument(id: string) {
 
 export function downloadDocument(id: string) {
   return apiRequestBlob(`/api/documents/${id}/download`);
+}
+
+export function processDocument(id: string) {
+  return apiRequest<ApiResponse<DocumentProcessingResponse>>(
+    `/api/documents/${id}/process`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export function getDocumentChunks(id: string) {
+  return apiRequest<ApiResponse<DocumentChunkListResponse>>(
+    `/api/documents/${id}/chunks`,
+  );
 }

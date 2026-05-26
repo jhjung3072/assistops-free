@@ -77,7 +77,7 @@
 
 ## Phase 4: Document Upload & Storage
 
-현재 진행 중인 단계입니다.
+기본 기반 구성을 마친 단계입니다.
 
 - 문서 업로드 UI
 - MinIO 객체 저장
@@ -88,12 +88,27 @@
 - 문서 soft delete
 - 업로드 상태와 처리 이력 관리
 - 현재는 원본 파일 저장과 메타데이터 관리까지만 구현
-- 문서 텍스트 추출, chunking, embedding은 Phase 5에서 구현 예정
+- 문서 텍스트 추출과 chunking은 Document Parsing & Chunking Foundation에서 진행
+
+## Phase 4.5: Document Parsing & Chunking Foundation
+
+현재 진행 중인 단계입니다.
+
+- Apache Tika 기반 PDF/TXT/MD 텍스트 추출
+- 문자 수 기반 chunking 구성
+- `document_chunks` 테이블과 JPA entity/repository 구성
+- 문서 처리 상태 `PROCESSING`, `PROCESSED`, `FAILED` 추가
+- `POST /api/documents/{id}/process` 구현
+- `GET /api/documents/{id}/chunks` 구현
+- `/documents` 화면에서 Process 버튼과 chunk 목록 확인 구성
+- token count는 임시로 `content.length / 4` 방식으로 추정
+- embedding 생성, pgvector similarity search, RAG 답변 생성은 Phase 5에서 구현 예정
 
 ## Phase 5: RAG Pipeline with Ollama and pgvector
 
 향후 구현 예정입니다.
 
+- embedding 생성과 저장
 - local embedding model 연동
 - 문서 chunking 및 embedding 저장
 - PostgreSQL + pgvector 유사도 검색

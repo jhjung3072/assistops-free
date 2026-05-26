@@ -52,6 +52,15 @@ public class Document {
 	@Column(name = "updated_at", nullable = false)
 	private Instant updatedAt;
 
+	@Column(name = "processed_at")
+	private Instant processedAt;
+
+	@Column(name = "processing_error", columnDefinition = "text")
+	private String processingError;
+
+	@Column(name = "chunk_count", nullable = false)
+	private int chunkCount;
+
 	public Document(
 		UUID workspaceId,
 		UUID uploadedBy,
@@ -72,6 +81,30 @@ public class Document {
 
 	public void markDeleted() {
 		this.status = DocumentStatus.DELETED;
+		this.updatedAt = Instant.now();
+	}
+
+	public void markProcessing() {
+		this.status = DocumentStatus.PROCESSING;
+		this.processedAt = null;
+		this.processingError = null;
+		this.chunkCount = 0;
+		this.updatedAt = Instant.now();
+	}
+
+	public void markProcessed(int chunkCount) {
+		this.status = DocumentStatus.PROCESSED;
+		this.processedAt = Instant.now();
+		this.processingError = null;
+		this.chunkCount = chunkCount;
+		this.updatedAt = Instant.now();
+	}
+
+	public void markFailed(String processingError) {
+		this.status = DocumentStatus.FAILED;
+		this.processedAt = null;
+		this.processingError = processingError;
+		this.chunkCount = 0;
 		this.updatedAt = Instant.now();
 	}
 

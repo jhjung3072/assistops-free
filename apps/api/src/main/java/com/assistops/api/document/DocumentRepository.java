@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface DocumentRepository extends JpaRepository<Document, UUID> {
 
-	List<Document> findByWorkspaceIdInAndStatusOrderByCreatedAtDesc(
+	List<Document> findByWorkspaceIdInAndStatusNotOrderByCreatedAtDesc(
 		Collection<UUID> workspaceIds,
 		DocumentStatus status
 	);
