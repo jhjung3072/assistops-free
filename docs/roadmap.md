@@ -12,6 +12,7 @@
 - README와 docs 기반 문서화
 - 기본 랜딩 화면 구성
 - 프론트엔드 주요 라이브러리 설치
+- GitHub Actions Web CI 구성
 
 ## Phase 1: Spring Boot API Foundation
 

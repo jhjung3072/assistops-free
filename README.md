@@ -35,6 +35,7 @@
 - `apps/web`: shadcn/ui 초기화 및 기본 UI 컴포넌트 일부 적용
 - 루트 `pnpm-workspace.yaml`: `apps/web` workspace 등록
 - 루트 `package.json`: 프론트엔드 실행, 빌드, 린트 스크립트 추가
+- GitHub Actions: 프론트엔드 lint/build 자동 검증 workflow 구성
 - 프론트엔드 주요 라이브러리: 의존성 설치 완료, 실제 기능 적용은 예정
 - 문서: 프로젝트 목표 아키텍처, 로드맵, 기술 스택, 작성 규칙 정리
 
@@ -76,7 +77,7 @@ pnpm build:web
 - Agent Chat UI
 - React Flow 기반 Workflow Builder
 - AI Release Copilot
-- GitHub Actions CI
+- GitHub Actions CI 고도화
 - OpenTelemetry, Prometheus, Grafana, Loki 기반 관측성
 - Docker Compose 기반 전체 로컬 실행 환경
 
