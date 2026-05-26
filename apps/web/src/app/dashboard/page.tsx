@@ -1,7 +1,13 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BriefcaseBusiness, FileText, LogOut, UserRound } from "lucide-react";
+import {
+  BriefcaseBusiness,
+  FileSearch,
+  FileText,
+  LogOut,
+  UserRound,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -120,6 +126,26 @@ export default function DashboardPage() {
                 className={buttonVariants({ variant: "outline" })}
               >
                 문서 관리로 이동
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileSearch aria-hidden="true" />
+                문서 검색
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                embedding이 생성된 문서 chunk를 query와 가까운 순서로 검색합니다.
+              </p>
+              <Link
+                href="/search"
+                className={buttonVariants({ variant: "outline" })}
+              >
+                문서 검색으로 이동
               </Link>
             </CardContent>
           </Card>

@@ -2,6 +2,7 @@ package com.assistops.api.global.exception;
 
 import com.assistops.api.document.storage.DocumentStorageException;
 import com.assistops.api.document.processing.DocumentProcessingException;
+import com.assistops.api.rag.embedding.EmbeddingException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -83,6 +84,12 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(DocumentProcessingException.class)
 	public ResponseEntity<ErrorResponse> handleDocumentProcessing(DocumentProcessingException exception) {
+		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+			.body(ErrorResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, exception.getMessage()));
+	}
+
+	@ExceptionHandler(EmbeddingException.class)
+	public ResponseEntity<ErrorResponse> handleEmbedding(EmbeddingException exception) {
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 			.body(ErrorResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, exception.getMessage()));
 	}

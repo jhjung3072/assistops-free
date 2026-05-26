@@ -38,7 +38,7 @@
 | Backend | JWT Bearer Auth | JSON body로 발급한 accessToken을 Authorization Bearer header로 인증 | 사용 중 |
 | Backend | BCrypt | 사용자 password hashing | 사용 중 |
 | Backend | RBAC | workspace membership 기반 권한 모델 | 기반 구성 |
-| Backend | Spring AI | AI 연동 추상화 검토 | 예정 |
+| Backend | Spring AI Ollama | 로컬 Ollama embedding model 호출 | 사용 중 |
 | Backend | Querydsl | 타입 안전 동적 쿼리 | 예정 |
 | Backend | Springdoc OpenAPI UI | API 문서화와 Swagger UI | 사용 중 |
 | Backend | Backend DB integration | Spring Boot와 PostgreSQL 연결 | 사용 중 |
@@ -48,15 +48,18 @@
 | Backend | PDFBox | Apache Tika parser package의 전이 의존성으로 사용. 직접 의존성은 추가하지 않음 | 간접 사용 |
 | Backend | Document Parsing | 원본 문서에서 텍스트 추출 | 사용 중 |
 | Backend | Document Chunking | RAG 준비용 문자 수 기반 chunk 저장 | 사용 중 |
-| AI | Ollama | 로컬 LLM 실행 | 로컬 인프라 구성, 앱 미연동 |
+| Backend | Document Embedding | document chunk content를 vector로 변환해 저장 | 사용 중 |
+| Backend | Semantic Chunk Search | query embedding 기준 유사 chunk 검색 | 사용 중 |
+| AI | Ollama | 로컬 embedding model 실행 | embedding 연동 사용 중 |
 | AI | qwen2.5-coder 또는 llama3.2 | 로컬 LLM 후보 모델 | 검토 |
-| AI | local embedding model | 문서 임베딩 생성 | 예정 |
-| AI | pgvector similarity search | chunk embedding 유사도 검색 | 예정 |
-| AI | RAG pipeline | embedding, 검색 증강 생성 흐름 | 예정 |
+| AI | nomic-embed-text | 기본 local embedding model, 768 dimension | 사용 중 |
+| AI | pgvector similarity search | chunk embedding cosine distance 검색 | 사용 중 |
+| AI | RAG answer generation | 검색 결과 기반 LLM 답변 생성 | 예정 |
+| AI | RAG pipeline | embedding, 검색 증강 생성 흐름 | 기반 구성, 답변 생성 예정 |
 | AI | prompt versioning | 프롬프트 변경 이력 관리 | 예정 |
 | AI | tool calling style internal actions | 내부 업무 액션 실행 구조 | 예정 |
 | Database / Storage | PostgreSQL | 주요 업무 데이터 저장. Docker named volume 사용 | 로컬 인프라 구성 및 API 연결 |
-| Database / Storage | pgvector | 벡터 임베딩 저장과 유사도 검색 기반 | extension 구성, RAG 미사용 |
+| Database / Storage | pgvector | `document_chunks.embedding vector(768)` 저장과 유사도 검색 | 사용 중 |
 | Database / Storage | Redis | 캐시와 세션 또는 작업 큐 보조 | 예정, 로컬 인프라 구성 |
 | Database / Storage | MinIO | 문서 원본 파일 객체 저장 | 사용 중 |
 | Infra | Docker Engine | 로컬 컨테이너 실행 | 사용 중 |

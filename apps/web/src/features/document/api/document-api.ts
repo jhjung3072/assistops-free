@@ -3,6 +3,7 @@ import type { ApiResponse } from "@/types/api";
 import type {
   Document,
   DocumentChunkListResponse,
+  DocumentEmbeddingResponse,
   DocumentListResponse,
   DocumentProcessingResponse,
   DocumentUploadResponse,
@@ -57,5 +58,14 @@ export function processDocument(id: string) {
 export function getDocumentChunks(id: string) {
   return apiRequest<ApiResponse<DocumentChunkListResponse>>(
     `/api/documents/${id}/chunks`,
+  );
+}
+
+export function embedDocument(id: string) {
+  return apiRequest<ApiResponse<DocumentEmbeddingResponse>>(
+    `/api/documents/${id}/embed`,
+    {
+      method: "POST",
+    },
   );
 }

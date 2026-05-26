@@ -5,6 +5,12 @@ export type DocumentStatus =
   | "FAILED"
   | "DELETED";
 
+export type DocumentEmbeddingStatus =
+  | "NOT_EMBEDDED"
+  | "EMBEDDING"
+  | "EMBEDDED"
+  | "EMBEDDING_FAILED";
+
 export type Document = {
   id: string;
   workspaceId: string;
@@ -16,6 +22,10 @@ export type Document = {
   chunkCount: number;
   processedAt: string | null;
   processingError: string | null;
+  embeddingStatus: DocumentEmbeddingStatus;
+  embeddedChunkCount: number;
+  embeddedAt: string | null;
+  embeddingError: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -32,6 +42,10 @@ export type DocumentProcessingResponse = {
   document: Document;
 };
 
+export type DocumentEmbeddingResponse = {
+  document: Document;
+};
+
 export type DocumentChunk = {
   id: string;
   documentId: string;
@@ -40,6 +54,8 @@ export type DocumentChunk = {
   content: string;
   tokenCount: number | null;
   charCount: number;
+  embeddedAt: string | null;
+  embeddingModel: string | null;
   createdAt: string;
 };
 

@@ -15,20 +15,24 @@ const navItems = [
     href: "/",
   },
   {
-    label: "Roadmap",
-    href: "/roadmap",
-  },
-  {
-    label: "Architecture",
-    href: "/architecture",
-  },
-  {
     label: "Dashboard",
     href: "/dashboard",
   },
   {
     label: "Documents",
     href: "/documents",
+  },
+  {
+    label: "Search",
+    href: "/search",
+  },
+  {
+    label: "Roadmap",
+    href: "/roadmap",
+  },
+  {
+    label: "Architecture",
+    href: "/architecture",
   },
 ] as const;
 

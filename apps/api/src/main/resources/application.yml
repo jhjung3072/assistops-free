@@ -21,6 +21,14 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+  ai:
+    model:
+      embedding: ollama
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      embedding:
+        options:
+          model: ${OLLAMA_EMBEDDING_MODEL:nomic-embed-text}
 
 management:
   endpoint:
@@ -58,3 +66,8 @@ storage:
     secret-key: ${MINIO_SECRET_KEY:assistops123}
     bucket: ${MINIO_BUCKET:assistops-documents}
     region: ${MINIO_REGION:us-east-1}
+
+rag:
+  embedding:
+    model: ${OLLAMA_EMBEDDING_MODEL:nomic-embed-text}
+    dimension: 768

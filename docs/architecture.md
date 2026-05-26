@@ -1,18 +1,20 @@
 # Architecture
 
-이 문서는 `AssistOps Free`의 목표 아키텍처를 정리합니다. 현재 구현된 영역은 `apps/web` 프론트엔드, `apps/api` Spring Boot API, Docker Compose 기반 로컬 인프라 실행 구성, Spring Boot API와 PostgreSQL 연결, JWT Bearer Auth API, Frontend Auth UI, Dashboard 초기 화면, Workspace 목록 조회, Document Upload UI, Document API, MinIO original file storage, Document Parsing, Document Chunking, PostgreSQL document metadata와 `document_chunks` 저장입니다. Redis와 Ollama는 아직 애플리케이션 코드와 연결하지 않았습니다.
+이 문서는 `AssistOps Free`의 목표 아키텍처를 정리합니다. 현재 구현된 영역은 `apps/web` 프론트엔드, `apps/api` Spring Boot API, Docker Compose 기반 로컬 인프라 실행 구성, Spring Boot API와 PostgreSQL 연결, JWT Bearer Auth API, Frontend Auth UI, Dashboard 초기 화면, Workspace 목록 조회, Document Upload UI, Document API, MinIO original file storage, Document Parsing, Document Chunking, Embedding generation, pgvector embedding storage, Semantic chunk search입니다. Redis와 Ollama chat model 기반 답변 생성은 아직 애플리케이션 코드와 연결하지 않았습니다.
 
 ## 현재 단계
 
-- `apps/web`: Next.js App Router 기반 프론트엔드, 로그인/회원가입/dashboard/documents 화면 사용 중
-- `apps/api`: Spring Boot API, PostgreSQL persistence foundation, JWT 인증, Document API, Document Parsing/Chunking 구성
+- `apps/web`: Next.js App Router 기반 프론트엔드, 로그인/회원가입/dashboard/documents/search 화면 사용 중
+- `apps/api`: Spring Boot API, PostgreSQL persistence foundation, JWT 인증, Document API, Document Parsing/Chunking, Embedding/Search 구성
 - Docker Compose: PostgreSQL + pgvector, Redis, MinIO, Ollama 로컬 실행 구성
 - PostgreSQL: Flyway migration, JPA `Workspace`, `User`, `WorkspaceMember`, `Document`, `DocumentChunk` entity 구성
 - MinIO: 원본 문서 object storage로 연결, 개발용 bucket 자동 초기화 구성
 - Document Processing: Apache Tika 기반 텍스트 추출, 문자 수 기반 chunking 구성
+- Embedding/Search: Spring AI Ollama로 `nomic-embed-text` embedding 생성, pgvector cosine distance 기반 chunk search 구성
 - Auth: Spring Security, JWT access token JSON body 발급, Authorization Bearer header 인증, BCrypt password hashing, `/api/auth/register`, `/api/auth/login`, `/api/auth/me` 구성
 - Frontend Auth: browser cookie token storage, cookie에서 accessToken을 읽어 Authorization header를 붙이는 fetch API client, TanStack Query, Zustand auth store, AuthGuard 구성
-- Document UI: 문서 업로드, 목록 조회, 다운로드, 삭제 화면 구성
+- Document UI: 문서 업로드, 목록 조회, 다운로드, 삭제, 처리, embedding 실행 화면 구성
+- Search UI: query 입력, topK 설정, semantic chunk search 결과 확인 화면 구성
 - RBAC: `workspace_members` 테이블 기반 역할 골격 구성. 세부 policy와 사용자별 workspace filtering은 예정
 - 루트 workspace: `apps/web` 등록
 - 문서화: 목표 아키텍처와 로드맵 작성 중
@@ -28,10 +30,14 @@ flowchart LR
   api --> auth[JWT Bearer Auth]
   api --> documents[Document API]
   documents --> parsing[Parsing / Chunking]
-  parsing --> postgres[(PostgreSQL + pgvector)]
+  parsing --> embedding[Embedding Generation]
+  embedding --> ollama[Ollama embedding model]
+  embedding --> postgres[(PostgreSQL + pgvector)]
+  api --> search[Semantic Chunk Search]
+  search --> postgres
   documents --> minio[(MinIO)]
   api -. 향후 연결 .-> redis[(Redis)]
-  api -. 향후 연결 .-> ollama[Ollama]
+  api -. 향후 chat model 연결 .-> ollamaChat[Ollama chat model]
   api --> otel[OpenTelemetry 예정]
   otel --> prometheus[Prometheus 예정]
   otel --> loki[Loki 예정]
@@ -45,19 +51,21 @@ flowchart LR
 
 | 구성 요소 | 역할 | 현재 상태 |
 | --- | --- | --- |
-| `apps/web` | Next.js App Router 기반 프론트엔드, auth UI, dashboard, documents 화면 | 사용 중 |
-| `apps/api` | Spring Boot 기반 백엔드 API, health API, auth API, workspace 조회 API, document API | 사용 중 |
+| `apps/web` | Next.js App Router 기반 프론트엔드, auth UI, dashboard, documents, search 화면 | 사용 중 |
+| `apps/api` | Spring Boot 기반 백엔드 API, health API, auth API, workspace 조회 API, document API, search API | 사용 중 |
 | Frontend Auth UI | 로그인, 회원가입, 로그아웃, 현재 사용자 조회, dashboard 접근 보호 | 사용 중 |
 | Document Upload UI | 문서 업로드, 목록, 다운로드, 삭제 | 사용 중 |
 | Document Processing UI | 문서 처리 버튼, 처리 상태, chunk 목록 확인 | 사용 중 |
+| Semantic Search UI | query 기반 유사 chunk 검색 결과 확인 | 사용 중 |
 | TanStack Query + Zustand | API 요청 상태와 사용자 인증 상태 관리 | 사용 중 |
-| PostgreSQL + pgvector | 업무 데이터, 문서 메타데이터, document chunks 저장 기반. 벡터 임베딩 저장은 예정 | 로컬 인프라 구성 및 API 연결 |
+| PostgreSQL + pgvector | 업무 데이터, 문서 메타데이터, document chunks, embedding vector 저장과 cosine distance 검색 | 사용 중 |
 | Spring Security + JWT | stateless 인증과 API 보호 | 사용 중 |
 | Workspace membership | workspace 단위 권한 모델 기반 | 기반 구성 |
 | Redis | 캐시, 세션, 비동기 작업 보조 저장소 | 로컬 인프라 구성, 앱 미연동 |
 | MinIO | 업로드 문서와 파일 객체 저장 | 사용 중 |
 | Apache Tika | PDF/TXT/MD 텍스트 추출 | 사용 중 |
-| Ollama | 로컬 LLM 실행 및 추론 | 로컬 인프라 구성, 앱 미연동 |
+| Spring AI Ollama | 로컬 Ollama embedding model 호출 | 사용 중 |
+| Ollama | 로컬 embedding model 실행. chat model 기반 답변 생성은 예정 | embedding 연동 사용 중 |
 | Docker Compose | 로컬 통합 실행 환경 | 사용 중 |
 | Nginx | reverse proxy 및 정적 자원 서빙 | 예정 |
 | GitHub Actions | 프론트엔드 lint/build CI, API test/build CI | 사용 중 |
@@ -73,9 +81,10 @@ flowchart LR
 3. 백엔드는 인증, 권한, 문서, 워크플로우, AI 요청을 처리합니다.
 4. 문서 파일은 MinIO에 저장하고, 메타데이터는 PostgreSQL에 저장합니다.
 5. 문서 텍스트를 추출하고 chunking 후 `document_chunks`에 저장합니다.
-6. 향후 chunk embedding을 pgvector에 저장합니다.
-7. RAG 요청은 PostgreSQL + pgvector 검색 결과와 Ollama 로컬 LLM을 조합해 처리합니다.
-7. 시스템 지표, 로그, trace는 OpenTelemetry 기반으로 수집하고 Prometheus, Loki, Grafana로 확인합니다.
+6. chunk content를 Ollama embedding model로 vector화하고 pgvector `embedding vector(768)` 컬럼에 저장합니다.
+7. Semantic search 요청은 query embedding과 pgvector cosine distance로 가까운 chunk를 반환합니다.
+8. 향후 RAG answer API는 PostgreSQL + pgvector 검색 결과와 Ollama chat model을 조합해 처리합니다.
+9. 시스템 지표, 로그, trace는 OpenTelemetry 기반으로 수집하고 Prometheus, Loki, Grafana로 확인합니다.
 
 ## Local Infrastructure
 
@@ -87,9 +96,9 @@ flowchart LR
 | Redis | `6379` | Spring Boot와 미연결 |
 | MinIO API | `9000` | Spring Boot Document API와 연결 |
 | MinIO Console | `9001` | 개발 중 bucket/object 확인 |
-| Ollama | `11434` | Spring Boot와 미연결 |
+| Ollama | `11434` | Spring AI embedding 호출에 연결 |
 
-현재 단계는 PostgreSQL 연결, JPA/Flyway 영속성 골격, JWT Bearer 인증 기반, workspace membership 기반 권한 골격, 프론트엔드 인증 화면, dashboard 초기 화면, 문서 업로드 및 원본 저장, 문서 텍스트 추출과 chunk 저장까지 다룹니다. Redis client, Spring AI, Ollama API 호출은 아직 추가하지 않았습니다.
+현재 단계는 PostgreSQL 연결, JPA/Flyway 영속성 골격, JWT Bearer 인증 기반, workspace membership 기반 권한 골격, 프론트엔드 인증 화면, dashboard 초기 화면, 문서 업로드 및 원본 저장, 문서 텍스트 추출과 chunk 저장, Ollama embedding 생성, pgvector 유사 chunk 검색까지 다룹니다. Redis client와 Ollama chat model 기반 답변 생성은 아직 추가하지 않았습니다.
 
 ## 현재 문서 저장 흐름
 
@@ -101,9 +110,11 @@ flowchart LR
 6. `POST /api/documents/{id}/process`는 MinIO 원본을 다운로드하고 Apache Tika로 텍스트를 추출합니다.
 7. 추출된 텍스트는 기본 1000자 chunk size와 150자 overlap으로 분할해 `document_chunks`에 저장합니다.
 8. token count는 tokenizer 기반이 아니라 `content.length / 4` 추정값입니다.
-9. 목록/상세/다운로드/삭제/처리/chunk 조회 API는 사용자가 속한 workspace 문서에 대해서만 동작합니다.
+9. `POST /api/documents/{id}/embed`는 `document_chunks.content`를 `nomic-embed-text`로 embedding하고 pgvector 컬럼에 저장합니다.
+10. `POST /api/search/chunks`는 query embedding과 cosine distance로 현재 사용자의 workspace chunk를 검색합니다.
+11. 목록/상세/다운로드/삭제/처리/chunk 조회/embedding/search API는 사용자가 속한 workspace 문서에 대해서만 동작합니다.
 
-현재 단계에서는 embedding generation, pgvector similarity search, Ollama answer generation, RAG API를 수행하지 않습니다.
+현재 단계에서는 Ollama answer generation, RAG answer API, prompt versioning, Agent Chat UI를 수행하지 않습니다.
 
 ## 현재 인증 흐름
 
@@ -119,6 +130,6 @@ PostgreSQL은 Docker named volume에 데이터를 저장합니다. 개발 중 `P
 
 ## 구현 상태 구분
 
-현재 이 문서는 목표 아키텍처를 설명합니다. 실제 구현 완료로 볼 수 있는 범위는 Next.js 프론트엔드, Spring Boot API, health API, JWT Auth API, 프론트엔드 로그인/회원가입/dashboard/documents 화면, 인증이 필요한 workspace 조회 API, 문서 업로드/목록/상세/다운로드/삭제/처리/chunk 조회 API, PostgreSQL 연결, Flyway migration, JPA entity, workspace membership foundation, MinIO 원본 파일 저장, Apache Tika 텍스트 추출, document chunk 저장, 프론트엔드 Web CI, API CI, Docker Compose 로컬 인프라 실행 구성까지입니다.
+현재 이 문서는 목표 아키텍처를 설명합니다. 실제 구현 완료로 볼 수 있는 범위는 Next.js 프론트엔드, Spring Boot API, health API, JWT Auth API, 프론트엔드 로그인/회원가입/dashboard/documents/search 화면, 인증이 필요한 workspace 조회 API, 문서 업로드/목록/상세/다운로드/삭제/처리/chunk 조회/embedding/search API, PostgreSQL 연결, Flyway migration, JPA entity, workspace membership foundation, MinIO 원본 파일 저장, Apache Tika 텍스트 추출, document chunk 저장, Spring AI Ollama embedding 호출, pgvector embedding 저장과 유사 chunk 검색, 프론트엔드 Web CI, API CI, Docker Compose 로컬 인프라 실행 구성까지입니다.
 
-예정 영역은 refresh token, HttpOnly Cookie 또는 BFF 인증 구조 검토, XSS/CSRF 보안 강화, workspace switcher, 사용자별 workspace filtering, 세부 RBAC policy, embedding generation, pgvector similarity search, Ollama answer generation, RAG API, workflow builder, Redis session/cache, Monitoring입니다.
+예정 영역은 refresh token, HttpOnly Cookie 또는 BFF 인증 구조 검토, XSS/CSRF 보안 강화, workspace switcher, 사용자별 workspace filtering, 세부 RBAC policy, RAG answer generation, prompt versioning, Ollama chat model integration, Agent Chat UI, workflow builder, Redis session/cache/queue, Monitoring입니다.

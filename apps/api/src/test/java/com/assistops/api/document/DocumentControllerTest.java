@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.assistops.api.support.AbstractPostgresContainerTest;
+import com.assistops.api.rag.embedding.EmbeddingService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 import java.io.ByteArrayInputStream;
@@ -47,15 +48,26 @@ class DocumentControllerTest extends AbstractPostgresContainerTest {
 	@Autowired
 	private DocumentChunkRepository documentChunkRepository;
 
+	@Autowired
+	private DocumentRepository documentRepository;
+
 	@MockitoBean
 	private DocumentStorageService documentStorageService;
 
+	@MockitoBean
+	private EmbeddingService embeddingService;
+
 	@BeforeEach
 	void setUp() {
+		documentChunkRepository.deleteAll();
+		documentRepository.deleteAll();
 		doNothing().when(documentStorageService).upload(anyString(), any(MultipartFile.class));
 		doNothing().when(documentStorageService).delete(anyString());
 		given(documentStorageService.download(anyString()))
 			.willAnswer(invocation -> textStream("first paragraph\n\nsecond paragraph for chunking"));
+		given(embeddingService.modelName()).willReturn("nomic-embed-text");
+		given(embeddingService.embedDocument(anyString())).willReturn(testEmbedding());
+		given(embeddingService.embedQuery(anyString())).willReturn(testEmbedding());
 	}
 
 	@Test
@@ -217,6 +229,81 @@ class DocumentControllerTest extends AbstractPostgresContainerTest {
 			.andExpect(jsonPath("$.message").value("Deleted documents cannot be processed."));
 	}
 
+	@Test
+	void embedReturnsUnauthorizedWithoutAuthentication() throws Exception {
+		mockMvc.perform(post("/api/documents/{id}/embed", UUID.randomUUID()))
+			.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void embedProcessedDocumentSucceeds() throws Exception {
+		String accessToken = registerAndGetToken();
+		String documentId = uploadDocument(accessToken);
+		processDocument(accessToken, documentId);
+
+		mockMvc.perform(post("/api/documents/{id}/embed", documentId)
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+			.andExpect(status().isOk())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.document.id").value(documentId))
+			.andExpect(jsonPath("$.document.embeddingStatus").value("EMBEDDED"))
+			.andExpect(jsonPath("$.document.embeddedChunkCount").value(1))
+			.andExpect(jsonPath("$.document.embeddedAt").exists())
+			.andExpect(jsonPath("$.document.embeddingError").doesNotExist());
+	}
+
+	@Test
+	void embedFailsForUnprocessedDocument() throws Exception {
+		String accessToken = registerAndGetToken();
+		String documentId = uploadDocument(accessToken);
+
+		mockMvc.perform(post("/api/documents/{id}/embed", documentId)
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.message").value("Document must be processed before embedding."));
+	}
+
+	@Test
+	void searchChunksReturnsUnauthorizedWithoutAuthentication() throws Exception {
+		mockMvc.perform(post("/api/search/chunks")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(Map.of(
+					"query", "paragraph",
+					"topK", 5
+				))))
+			.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void searchChunksSucceedsWithAuthentication() throws Exception {
+		String accessToken = registerAndGetToken();
+		String documentId = uploadDocument(accessToken);
+		processDocument(accessToken, documentId);
+
+		mockMvc.perform(post("/api/documents/{id}/embed", documentId)
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+			.andExpect(status().isOk());
+
+		mockMvc.perform(post("/api/search/chunks")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(Map.of(
+					"query", "paragraph",
+					"topK", 5
+				))))
+			.andExpect(status().isOk())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.query").value("paragraph"))
+			.andExpect(jsonPath("$.topK").value(5))
+			.andExpect(jsonPath("$.results[0].documentId").value(documentId))
+			.andExpect(jsonPath("$.results[0].documentName").value("notes.txt"))
+			.andExpect(jsonPath("$.results[0].chunkIndex").value(0))
+			.andExpect(jsonPath("$.results[0].content").value("first paragraph\n\nsecond paragraph for chunking"))
+			.andExpect(jsonPath("$.results[0].score").exists())
+			.andExpect(jsonPath("$.results[0].distance").exists())
+			.andExpect(jsonPath("$.results[0].embeddingModel").value("nomic-embed-text"));
+	}
+
 	private String uploadDocument(String accessToken) throws Exception {
 		MvcResult result = mockMvc.perform(multipart("/api/documents")
 				.file(textFile())
@@ -225,6 +312,12 @@ class DocumentControllerTest extends AbstractPostgresContainerTest {
 			.andReturn();
 
 		return JsonPath.read(result.getResponse().getContentAsString(), "$.document.id");
+	}
+
+	private void processDocument(String accessToken, String documentId) throws Exception {
+		mockMvc.perform(post("/api/documents/{id}/process", documentId)
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+			.andExpect(status().isOk());
 	}
 
 	private String registerAndGetToken() throws Exception {
@@ -252,5 +345,11 @@ class DocumentControllerTest extends AbstractPostgresContainerTest {
 
 	private ByteArrayInputStream textStream(String text) {
 		return new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8));
+	}
+
+	private float[] testEmbedding() {
+		float[] embedding = new float[768];
+		embedding[0] = 1.0f;
+		return embedding;
 	}
 }

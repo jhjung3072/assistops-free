@@ -1,0 +1,6 @@
+CREATE EXTENSION IF NOT EXISTS vector;
+
+ALTER TABLE document_chunks
+    ADD COLUMN IF NOT EXISTS embedding vector(768),
+    ADD COLUMN IF NOT EXISTS embedded_at TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS embedding_model VARCHAR(255);

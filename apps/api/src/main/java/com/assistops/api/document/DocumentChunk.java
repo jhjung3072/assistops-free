@@ -49,6 +49,12 @@ public class DocumentChunk {
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
 
+	@Column(name = "embedded_at")
+	private Instant embeddedAt;
+
+	@Column(name = "embedding_model", length = 255)
+	private String embeddingModel;
+
 	public DocumentChunk(
 		UUID documentId,
 		UUID workspaceId,
@@ -63,6 +69,11 @@ public class DocumentChunk {
 		this.content = content;
 		this.tokenCount = tokenCount;
 		this.charCount = content.length();
+	}
+
+	public void markEmbedded(String embeddingModel, Instant embeddedAt) {
+		this.embeddingModel = embeddingModel;
+		this.embeddedAt = embeddedAt;
 	}
 
 	@PrePersist

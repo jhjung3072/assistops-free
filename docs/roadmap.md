@@ -92,7 +92,7 @@
 
 ## Phase 4.5: Document Parsing & Chunking Foundation
 
-현재 진행 중인 단계입니다.
+기본 기반 구성을 마친 단계입니다.
 
 - Apache Tika 기반 PDF/TXT/MD 텍스트 추출
 - 문자 수 기반 chunking 구성
@@ -102,20 +102,33 @@
 - `GET /api/documents/{id}/chunks` 구현
 - `/documents` 화면에서 Process 버튼과 chunk 목록 확인 구성
 - token count는 임시로 `content.length / 4` 방식으로 추정
-- embedding 생성, pgvector similarity search, RAG 답변 생성은 Phase 5에서 구현 예정
+- embedding 생성과 pgvector similarity search는 Embedding & Vector Search Foundation에서 진행
+- RAG 답변 생성은 다음 단계로 유지
 
-## Phase 5: RAG Pipeline with Ollama and pgvector
+## Phase 5: Embedding & Vector Search Foundation
+
+현재 진행 중인 단계입니다.
+
+- Spring AI Ollama 기반 `nomic-embed-text` embedding model 연동
+- `document_chunks.embedding vector(768)` 저장
+- 문서 단위 embedding 처리 API `POST /api/documents/{id}/embed` 구현
+- 문서 embedding 상태 `NOT_EMBEDDED`, `EMBEDDING`, `EMBEDDED`, `EMBEDDING_FAILED` 관리
+- pgvector cosine distance 기반 semantic chunk search API `POST /api/search/chunks` 구현
+- `/documents` 화면에서 Embed 버튼과 embedding 상태 표시
+- `/search` 화면에서 query 기반 유사 chunk 검색 결과 표시
+- Redis queue 기반 비동기 embedding 처리와 RAG 답변 생성은 후속 작업으로 유지
+
+## Phase 6: RAG Answer API
 
 향후 구현 예정입니다.
 
-- embedding 생성과 저장
-- local embedding model 연동
-- 문서 chunking 및 embedding 저장
-- PostgreSQL + pgvector 유사도 검색
-- Ollama 기반 답변 생성
+- semantic search 결과를 context로 사용하는 답변 생성 API
+- Ollama chat model integration
 - prompt versioning 구조
+- 검색 결과 출처 포함
+- streaming response는 후속 개선 후보
 
-## Phase 6: Agent Chat UI
+## Phase 7: Agent Chat UI
 
 향후 구현 예정입니다.
 
@@ -124,7 +137,7 @@
 - internal action 실행 결과 표시
 - 대화 이력 관리
 
-## Phase 7: Workflow Builder
+## Phase 8: Workflow Builder
 
 향후 구현 예정입니다.
 
@@ -132,7 +145,7 @@
 - 트리거, 조건, 액션 노드 모델
 - 실행 로그와 실패 재시도 구조
 
-## Phase 8: AI Release Copilot
+## Phase 9: AI Release Copilot
 
 향후 구현 예정입니다.
 
@@ -140,7 +153,7 @@
 - 릴리스 노트 초안 생성
 - PR 또는 commit 기반 요약 흐름 검토
 
-## Phase 9: Monitoring & Observability
+## Phase 10: Monitoring & Observability
 
 향후 구현 예정입니다.
 
@@ -149,7 +162,7 @@
 - Loki log 수집
 - Grafana dashboard 구성
 
-## Phase 10: Deployment & Portfolio Polish
+## Phase 11: Deployment & Portfolio Polish
 
 향후 구현 예정입니다.
 

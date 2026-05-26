@@ -41,7 +41,7 @@ class HealthControllerTest {
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(jsonPath("$.status").value("OK"))
 			.andExpect(jsonPath("$.service").value("assistops-api"))
-			.andExpect(jsonPath("$.phase").value("Document Parsing & Chunking Foundation"))
+			.andExpect(jsonPath("$.phase").value("Embedding & Vector Search Foundation"))
 			.andExpect(jsonPath("$.database").value("UP"));
 	}
 }

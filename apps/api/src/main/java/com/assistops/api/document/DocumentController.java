@@ -2,6 +2,8 @@ package com.assistops.api.document;
 
 import com.assistops.api.global.exception.UnauthorizedException;
 import com.assistops.api.global.security.CustomUserDetails;
+import com.assistops.api.rag.DocumentEmbeddingResponse;
+import com.assistops.api.rag.DocumentEmbeddingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.nio.charset.StandardCharsets;
@@ -30,13 +32,16 @@ public class DocumentController {
 
 	private final DocumentService documentService;
 	private final DocumentProcessingService documentProcessingService;
+	private final DocumentEmbeddingService documentEmbeddingService;
 
 	public DocumentController(
 		DocumentService documentService,
-		DocumentProcessingService documentProcessingService
+		DocumentProcessingService documentProcessingService,
+		DocumentEmbeddingService documentEmbeddingService
 	) {
 		this.documentService = documentService;
 		this.documentProcessingService = documentProcessingService;
+		this.documentEmbeddingService = documentEmbeddingService;
 	}
 
 	@Operation(summary = "Upload document")
@@ -106,6 +111,15 @@ public class DocumentController {
 		@PathVariable UUID id
 	) {
 		return documentProcessingService.getChunks(currentUser(userDetails), id);
+	}
+
+	@Operation(summary = "Embed document chunks")
+	@PostMapping("/{id}/embed")
+	public DocumentEmbeddingResponse embed(
+		@AuthenticationPrincipal CustomUserDetails userDetails,
+		@PathVariable UUID id
+	) {
+		return documentEmbeddingService.embed(currentUser(userDetails), id);
 	}
 
 	@Operation(summary = "Delete document")

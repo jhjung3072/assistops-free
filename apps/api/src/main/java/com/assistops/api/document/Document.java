@@ -61,6 +61,19 @@ public class Document {
 	@Column(name = "chunk_count", nullable = false)
 	private int chunkCount;
 
+	@Column(name = "embedded_at")
+	private Instant embeddedAt;
+
+	@Column(name = "embedded_chunk_count", nullable = false)
+	private int embeddedChunkCount;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "embedding_status", nullable = false, length = 40)
+	private DocumentEmbeddingStatus embeddingStatus;
+
+	@Column(name = "embedding_error", columnDefinition = "text")
+	private String embeddingError;
+
 	public Document(
 		UUID workspaceId,
 		UUID uploadedBy,
@@ -77,6 +90,7 @@ public class Document {
 		this.contentType = contentType;
 		this.sizeBytes = sizeBytes;
 		this.status = DocumentStatus.UPLOADED;
+		this.embeddingStatus = DocumentEmbeddingStatus.NOT_EMBEDDED;
 	}
 
 	public void markDeleted() {
@@ -89,6 +103,7 @@ public class Document {
 		this.processedAt = null;
 		this.processingError = null;
 		this.chunkCount = 0;
+		resetEmbedding();
 		this.updatedAt = Instant.now();
 	}
 
@@ -97,6 +112,7 @@ public class Document {
 		this.processedAt = Instant.now();
 		this.processingError = null;
 		this.chunkCount = chunkCount;
+		resetEmbedding();
 		this.updatedAt = Instant.now();
 	}
 
@@ -105,6 +121,31 @@ public class Document {
 		this.processedAt = null;
 		this.processingError = processingError;
 		this.chunkCount = 0;
+		resetEmbedding();
+		this.updatedAt = Instant.now();
+	}
+
+	public void markEmbedding() {
+		this.embeddingStatus = DocumentEmbeddingStatus.EMBEDDING;
+		this.embeddedAt = null;
+		this.embeddedChunkCount = 0;
+		this.embeddingError = null;
+		this.updatedAt = Instant.now();
+	}
+
+	public void markEmbedded(int embeddedChunkCount) {
+		this.embeddingStatus = DocumentEmbeddingStatus.EMBEDDED;
+		this.embeddedAt = Instant.now();
+		this.embeddedChunkCount = embeddedChunkCount;
+		this.embeddingError = null;
+		this.updatedAt = Instant.now();
+	}
+
+	public void markEmbeddingFailed(String embeddingError) {
+		this.embeddingStatus = DocumentEmbeddingStatus.EMBEDDING_FAILED;
+		this.embeddedAt = null;
+		this.embeddedChunkCount = 0;
+		this.embeddingError = embeddingError;
 		this.updatedAt = Instant.now();
 	}
 
@@ -118,6 +159,9 @@ public class Document {
 		if (status == null) {
 			status = DocumentStatus.UPLOADED;
 		}
+		if (embeddingStatus == null) {
+			embeddingStatus = DocumentEmbeddingStatus.NOT_EMBEDDED;
+		}
 		if (createdAt == null) {
 			createdAt = now;
 		}
@@ -129,5 +173,12 @@ public class Document {
 	@PreUpdate
 	void preUpdate() {
 		updatedAt = Instant.now();
+	}
+
+	private void resetEmbedding() {
+		embeddedAt = null;
+		embeddedChunkCount = 0;
+		embeddingStatus = DocumentEmbeddingStatus.NOT_EMBEDDED;
+		embeddingError = null;
 	}
 }

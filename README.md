@@ -2,7 +2,7 @@
 
 `AssistOps Free`는 유료 AI API나 관리형 클라우드 서비스에 의존하지 않고, 로컬 LLM과 오픈소스 인프라만으로 동작하는 AI 업무 자동화 플랫폼을 목표로 하는 포트폴리오 프로젝트입니다.
 
-현재 단계는 **Document Parsing & Chunking Foundation**입니다. Next.js 프론트엔드, Spring Boot API, Docker Compose 기반 로컬 인프라, PostgreSQL + pgvector 연결, Flyway/JPA 영속성 기반, JWT Bearer 인증 API, 프론트엔드 cookie token storage 기반 인증 화면, 문서 업로드/목록/다운로드/삭제/처리 화면이 구성되어 있습니다. MinIO는 원본 문서 저장소로 연결되어 있고, Redis와 Ollama는 아직 애플리케이션 코드와 연결하지 않았습니다.
+현재 단계는 **Embedding & Vector Search Foundation**입니다. Next.js 프론트엔드, Spring Boot API, Docker Compose 기반 로컬 인프라, PostgreSQL + pgvector 연결, Flyway/JPA 영속성 기반, JWT Bearer 인증 API, 프론트엔드 cookie token storage 기반 인증 화면, 문서 업로드/목록/다운로드/삭제/처리/embedding 화면, semantic chunk search 화면이 구성되어 있습니다. MinIO는 원본 문서 저장소로 연결되어 있고, Ollama는 `nomic-embed-text` 기반 embedding 생성에 연결되어 있습니다. Redis는 아직 애플리케이션 코드와 연결하지 않았습니다.
 
 ## 프로젝트 목표
 
@@ -29,10 +29,12 @@
 | Backend            | Spring Security, JWT, BCrypt                                                                                                                    | 사용 중   |
 | Backend            | Workspace membership 기반 RBAC foundation                                                                                                       | 기반 구성 |
 | Backend            | Apache Tika 기반 문서 텍스트 추출, 문자 수 기반 chunking                                                                                        | 사용 중   |
-| Backend            | Spring AI, Querydsl                                                                                                                             | 예정      |
-| AI                 | Ollama                                                                                                                                          | 로컬 인프라 구성, 앱 미연동 |
-| AI                 | qwen2.5-coder 또는 llama3.2 계열 로컬 모델, local embedding model, RAG pipeline, prompt versioning, tool calling style internal actions          | 예정      |
-| Database / Storage | PostgreSQL, pgvector                                                                                                                            | 로컬 인프라 구성 및 API 연결 |
+| Backend            | Spring AI Ollama embedding 연동                                                                                                                 | 사용 중   |
+| Backend            | Querydsl                                                                                                                                        | 예정      |
+| AI                 | Ollama                                                                                                                                          | embedding model 연동 사용 중 |
+| AI                 | `nomic-embed-text` local embedding model                                                                                                        | 사용 중   |
+| AI                 | qwen2.5-coder 또는 llama3.2 계열 로컬 chat model, RAG answer generation, prompt versioning, tool calling style internal actions                  | 예정      |
+| Database / Storage | PostgreSQL, pgvector                                                                                                                            | 문서/청크/embedding 저장과 vector search 사용 중 |
 | Database / Storage | MinIO                                                                                                                                           | 원본 문서 저장소로 사용 중 |
 | Database / Storage | Redis                                                                                                                                           | 로컬 인프라 구성, 앱 미연동 |
 | Infra              | Docker Engine, Docker Compose, GitHub Actions                                                                                                   | 사용 중   |
@@ -46,6 +48,7 @@
 - `apps/web`: 로그인, 회원가입, 인증 보호 dashboard, workspace 목록 조회 화면 구성
 - `apps/web`: 문서 업로드, 문서 목록, 다운로드, 삭제 화면 구성
 - `apps/web`: 문서 처리 버튼과 chunk 목록 확인 UI 구성
+- `apps/web`: 문서 embedding 실행 버튼과 semantic chunk search 화면 구성
 - `apps/web`: cookie에서 accessToken을 읽어 Authorization header를 붙이는 fetch API client, TanStack Query, Zustand auth store 연동
 - `apps/api`: Spring Boot API 초기 골격 및 `GET /api/health` 구현
 - `apps/api`: PostgreSQL datasource, Flyway migration, JPA 기반 `workspaces` 조회 API 구성
@@ -53,6 +56,7 @@
 - `apps/api`: `users`, `workspace_members` 테이블과 workspace membership 기반 RBAC 최소 골격 구성
 - `apps/api`: 문서 API, MinIO 원본 파일 저장, PostgreSQL 문서 메타데이터 저장 구성
 - `apps/api`: Apache Tika 기반 문서 텍스트 추출, chunking, `document_chunks` 저장 구성
+- `apps/api`: Spring AI Ollama 기반 chunk embedding 생성, pgvector 저장, semantic chunk search API 구성
 - `docker-compose.yml`: PostgreSQL + pgvector, Redis, MinIO, Ollama 로컬 인프라 실행 구성
 - `infra/postgres/init`: PostgreSQL 시작 시 pgvector extension 활성화 SQL 추가
 - 루트 `pnpm-workspace.yaml`: `apps/web` workspace 등록
@@ -68,9 +72,9 @@
 - 사용자별 workspace filtering
 - workspace switching UI
 - 세부 RBAC policy
-- embedding 생성과 pgvector similarity search
-- Spring Boot와 Redis, Ollama 연결
-- RAG, Agent UI, Workflow Builder
+- LLM 답변 생성과 RAG answer API
+- Spring Boot와 Redis 연결
+- Agent UI, Workflow Builder
 - OpenTelemetry, Prometheus, Grafana, Loki 관측성
 
 ## 로컬 실행 방법
@@ -116,6 +120,7 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
 | `/register` | 회원가입 화면 |
 | `/dashboard` | 인증된 사용자 dashboard와 workspace 목록 |
 | `/documents` | 인증된 사용자 문서 업로드와 문서 목록 |
+| `/search` | embedding된 chunk semantic search |
 
 Health API 확인:
 
@@ -156,6 +161,14 @@ curl -X POST http://localhost:8080/api/documents/<documentId>/process \
 
 curl http://localhost:8080/api/documents/<documentId>/chunks \
   -H 'Authorization: Bearer <accessToken>'
+
+curl -X POST http://localhost:8080/api/documents/<documentId>/embed \
+  -H 'Authorization: Bearer <accessToken>'
+
+curl -X POST http://localhost:8080/api/search/chunks \
+  -H 'Authorization: Bearer <accessToken>' \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"문서에서 찾을 내용","topK":5}'
 ```
 
 주요 Auth endpoint:
@@ -172,7 +185,7 @@ curl http://localhost:8080/api/documents/<documentId>/chunks \
 pnpm test:api
 ```
 
-현재 백엔드는 PostgreSQL 연결, `workspaces` 조회 API, JWT 기반 인증 API까지 구성되어 있습니다. `/api/workspaces`는 인증된 사용자만 접근할 수 있지만, 사용자별 workspace filtering은 다음 단계에서 구현할 예정입니다. refresh token, 세부 RBAC policy, Redis, MinIO, Ollama, RAG 연동은 아직 구현하지 않았습니다.
+현재 백엔드는 PostgreSQL 연결, `workspaces` 조회 API, JWT 기반 인증 API, 문서 업로드/처리/embedding/search API까지 구성되어 있습니다. `/api/workspaces`는 인증된 사용자만 접근할 수 있지만, 사용자별 workspace filtering은 다음 단계에서 구현할 예정입니다. refresh token, 세부 RBAC policy, Redis queue, LLM 답변 생성형 RAG 연동은 아직 구현하지 않았습니다.
 
 현재 인증은 백엔드가 JWT accessToken을 JSON 응답 body로 내려주고, 프론트엔드가 해당 토큰을 `assistops_access_token` browser cookie에 저장하는 방식입니다. 프론트엔드는 accessToken을 `localStorage`나 `sessionStorage`에 저장하지 않습니다. API 요청 시 cookie에서 token을 읽어 `Authorization: Bearer <token>` header를 추가하고, 로그인 상태 복원은 `GET /api/auth/me` 응답으로 판단합니다.
 
@@ -192,7 +205,17 @@ pnpm test:api
 
 최대 파일 크기는 10MB입니다. `/documents` 화면의 `Process` 버튼을 누르면 API가 MinIO 원본 파일을 읽고 Apache Tika로 텍스트를 추출한 뒤, RAG 준비를 위한 chunk를 PostgreSQL `document_chunks` 테이블에 저장합니다. 현재 chunking은 문자 수 기준이며 기본 chunk size는 1000자, overlap은 150자입니다. `tokenCount`는 정확한 tokenizer가 아니라 `content.length / 4` 기준의 추정값입니다.
 
-현재 단계에서는 embedding 생성, pgvector 유사도 검색, Ollama 답변 생성, RAG API는 아직 구현하지 않았습니다.
+`Embed` 버튼을 누르면 `document_chunks.content`를 Ollama embedding model로 vector화하고 `document_chunks.embedding vector(768)`에 저장합니다. 기본 모델은 `nomic-embed-text`이며, Nomic 모델 카드 기준 기본 embedding dimension은 768입니다. `/search` 화면은 query를 같은 embedding model로 vector화한 뒤 pgvector cosine distance 기준으로 가까운 chunk를 반환합니다.
+
+Ollama embedding model은 처음 실행 전에 준비해야 합니다.
+
+```bash
+docker exec -it assistops-ollama ollama pull nomic-embed-text
+```
+
+모델이 없거나 Ollama가 아직 준비되지 않았다면 `POST /api/documents/{id}/embed` 또는 `POST /api/search/chunks`가 실패할 수 있습니다.
+
+현재 단계에서는 LLM 답변 생성, RAG answer API, Agent Chat, Workflow Builder, Redis queue 기반 비동기 embedding 처리는 아직 구현하지 않았습니다.
 
 주요 Document endpoint:
 
@@ -205,6 +228,8 @@ pnpm test:api
 | `DELETE` | `/api/documents/{id}` | 문서 soft delete 및 MinIO object 삭제 |
 | `POST` | `/api/documents/{id}/process` | 텍스트 추출과 chunk 생성 |
 | `GET` | `/api/documents/{id}/chunks` | 문서 chunk 목록 조회 |
+| `POST` | `/api/documents/{id}/embed` | 문서 chunk embedding 생성과 pgvector 저장 |
+| `POST` | `/api/search/chunks` | query 기반 유사 chunk 검색 |
 
 ## 로컬 인프라 실행 방법
 
@@ -233,14 +258,14 @@ pnpm infra:reset
 | Redis | `localhost:6379` |
 | MinIO API | `http://localhost:9000`, access key `assistops`, secret key `assistops123` |
 | MinIO Console | `http://localhost:9001` |
-| Ollama | `http://localhost:11434` |
+| Ollama | `http://localhost:11434`, embedding model `nomic-embed-text` |
 
 개발용 계정과 비밀번호는 `.env.example`에 예시로만 제공합니다. 이 값은 로컬 개발용 기본값이며 운영용으로 사용하지 않습니다. 실제 `.env` 파일은 커밋하지 않습니다.
 PostgreSQL 컨테이너 최초 초기화에는 `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`가 사용되고, Spring Boot datasource에는 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`가 사용됩니다. 로컬 기본값은 모두 `assistops`로 맞춰져 있습니다.
 Docker Compose PostgreSQL은 로컬 PostgreSQL과 충돌하지 않도록 기본 host port를 `15432`로 사용합니다. 필요하면 `.env`의 `DB_PORT` 값으로 Docker Compose PostgreSQL의 host port를 조정할 수 있습니다.
 JWT와 MinIO 개발용 secret도 `.env.example`에 예시로만 제공합니다. 운영 환경에서는 `JWT_SECRET`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`를 실제 비밀값으로 반드시 override해야 합니다.
 
-현재 Spring Boot API는 PostgreSQL과 MinIO에 연결되어 있습니다. Redis client, Spring AI, Ollama API 호출은 후속 단계에서 추가할 예정입니다.
+현재 Spring Boot API는 PostgreSQL, MinIO, Spring AI Ollama embedding 호출에 연결되어 있습니다. Redis client와 Ollama chat model 기반 답변 생성은 후속 단계에서 추가할 예정입니다.
 
 ## Troubleshooting
 
@@ -289,9 +314,8 @@ DB_PORT=25432 pnpm dev:api
 - 사용자별 workspace filtering
 - workspace switching UI
 - 세부 RBAC policy
-- embedding 생성과 PostgreSQL + pgvector 기반 임베딩 저장소
-- pgvector similarity search
-- RAG API와 Ollama 답변 생성
+- Redis queue 기반 비동기 embedding 처리
+- RAG answer API와 Ollama chat model 답변 생성
 - Ollama 기반 로컬 LLM 질의 응답
 - RAG 기반 문서 검색 및 답변 생성
 - Agent Chat UI

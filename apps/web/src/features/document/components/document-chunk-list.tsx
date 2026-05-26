@@ -75,7 +75,7 @@ export function DocumentChunkList({ documentId }: DocumentChunkListProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3">
-            <dl className="grid gap-3 text-sm sm:grid-cols-3">
+            <dl className="grid gap-3 text-sm sm:grid-cols-4">
               <div>
                 <dt className="text-muted-foreground">문자 수</dt>
                 <dd className="mt-1 font-medium">{chunk.charCount}</dd>
@@ -88,6 +88,16 @@ export function DocumentChunkList({ documentId }: DocumentChunkListProps) {
                 <dt className="text-muted-foreground">생성</dt>
                 <dd className="mt-1 font-medium">
                   {new Date(chunk.createdAt).toLocaleString()}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Embedding</dt>
+                <dd className="mt-1 font-medium">
+                  {chunk.embeddedAt
+                    ? `${chunk.embeddingModel ?? "model"} · ${new Date(
+                        chunk.embeddedAt,
+                      ).toLocaleString()}`
+                    : "-"}
                 </dd>
               </div>
             </dl>

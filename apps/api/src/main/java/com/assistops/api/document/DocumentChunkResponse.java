@@ -11,6 +11,8 @@ public record DocumentChunkResponse(
 	String content,
 	Integer tokenCount,
 	int charCount,
+	Instant embeddedAt,
+	String embeddingModel,
 	Instant createdAt
 ) {
 
@@ -23,6 +25,8 @@ public record DocumentChunkResponse(
 			chunk.getContent(),
 			chunk.getTokenCount(),
 			chunk.getCharCount(),
+			chunk.getEmbeddedAt(),
+			chunk.getEmbeddingModel(),
 			chunk.getCreatedAt()
 		);
 	}

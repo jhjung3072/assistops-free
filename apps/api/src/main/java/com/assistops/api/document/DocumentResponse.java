@@ -14,6 +14,10 @@ public record DocumentResponse(
 	int chunkCount,
 	Instant processedAt,
 	String processingError,
+	DocumentEmbeddingStatus embeddingStatus,
+	int embeddedChunkCount,
+	Instant embeddedAt,
+	String embeddingError,
 	Instant createdAt,
 	Instant updatedAt
 ) {
@@ -30,6 +34,10 @@ public record DocumentResponse(
 			document.getChunkCount(),
 			document.getProcessedAt(),
 			document.getProcessingError(),
+			document.getEmbeddingStatus(),
+			document.getEmbeddedChunkCount(),
+			document.getEmbeddedAt(),
+			document.getEmbeddingError(),
 			document.getCreatedAt(),
 			document.getUpdatedAt()
 		);

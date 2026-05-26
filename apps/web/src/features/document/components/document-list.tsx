@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Eye, FileText, Play, Trash2 } from "lucide-react";
+import { Download, Eye, FileText, Play, Sparkles, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -16,6 +16,7 @@ import {
 import {
   deleteDocument,
   downloadDocument,
+  embedDocument,
   getDocuments,
   processDocument,
 } from "@/features/document/api/document-api";
@@ -58,9 +59,22 @@ export function DocumentList({
     },
   });
 
+  const embedMutation = useMutation({
+    mutationFn: embedDocument,
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
+      queryClient.invalidateQueries({
+        queryKey: ["documents", response.document.id, "chunks"],
+      });
+    },
+  });
+
   const documents = documentsQuery.data?.documents ?? [];
   const processingDocumentId = processMutation.isPending
     ? processMutation.variables
+    : null;
+  const embeddingDocumentId = embedMutation.isPending
+    ? embedMutation.variables
     : null;
 
   async function handleDownload(document: DocumentItem) {
@@ -116,6 +130,17 @@ export function DocumentList({
             {getApiErrorMessage(
               processMutation.error,
               "문서를 처리하지 못했습니다.",
+            )}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {embedMutation.isError ? (
+        <Alert variant="destructive">
+          <AlertDescription>
+            {getApiErrorMessage(
+              embedMutation.error,
+              "문서 embedding을 생성하지 못했습니다. Ollama 모델이 준비되어 있는지 확인해 주세요.",
             )}
           </AlertDescription>
         </Alert>
@@ -192,6 +217,34 @@ export function DocumentList({
                       : "-"}
                   </dd>
                 </div>
+                <div>
+                  <dt className="text-muted-foreground">Embedding</dt>
+                  <dd className="mt-1">
+                    <Badge
+                      variant={embeddingStatusBadgeVariant(
+                        document.embeddingStatus,
+                      )}
+                    >
+                      {embeddingDocumentId === document.id
+                        ? "EMBEDDING"
+                        : document.embeddingStatus}
+                    </Badge>
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Embedded Chunks</dt>
+                  <dd className="mt-1 font-medium">
+                    {document.embeddedChunkCount}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Embedding 완료</dt>
+                  <dd className="mt-1 font-medium">
+                    {document.embeddedAt
+                      ? new Date(document.embeddedAt).toLocaleString()
+                      : "-"}
+                  </dd>
+                </div>
               </dl>
 
               {document.processingError ? (
@@ -199,6 +252,12 @@ export function DocumentList({
                   <AlertDescription>
                     {document.processingError}
                   </AlertDescription>
+                </Alert>
+              ) : null}
+
+              {document.embeddingError ? (
+                <Alert variant="destructive">
+                  <AlertDescription>{document.embeddingError}</AlertDescription>
                 </Alert>
               ) : null}
 
@@ -216,6 +275,22 @@ export function DocumentList({
                   <Play aria-hidden="true" />
                   {processingDocumentId === document.id ? "처리 중" : "Process"}
                 </Button>
+                {document.status === "PROCESSED" ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => embedMutation.mutate(document.id)}
+                    disabled={
+                      embedMutation.isPending ||
+                      embeddingDocumentId === document.id
+                    }
+                  >
+                    <Sparkles aria-hidden="true" />
+                    {embeddingDocumentId === document.id
+                      ? "Embedding 중"
+                      : "Embed"}
+                  </Button>
+                ) : null}
                 {document.status === "PROCESSED" ? (
                   <Button
                     variant={
@@ -264,6 +339,20 @@ function statusBadgeVariant(
   }
 
   if (status === "PROCESSED") {
+    return "secondary";
+  }
+
+  return "outline";
+}
+
+function embeddingStatusBadgeVariant(
+  status: DocumentItem["embeddingStatus"],
+): "destructive" | "secondary" | "outline" {
+  if (status === "EMBEDDING_FAILED") {
+    return "destructive";
+  }
+
+  if (status === "EMBEDDED") {
     return "secondary";
   }
 
