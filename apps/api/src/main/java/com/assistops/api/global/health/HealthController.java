@@ -11,9 +11,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/health")
 public class HealthController {
 
+	private final DatabaseHealthService databaseHealthService;
+
+	public HealthController(DatabaseHealthService databaseHealthService) {
+		this.databaseHealthService = databaseHealthService;
+	}
+
 	@Operation(summary = "Get API health status")
 	@GetMapping
 	public HealthResponse getHealth() {
-		return HealthResponse.ok();
+		return HealthResponse.ok(databaseHealthService.getDatabaseStatus());
 	}
 }

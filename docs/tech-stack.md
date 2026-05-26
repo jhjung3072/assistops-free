@@ -28,22 +28,24 @@
 | Backend | Spring Boot Actuator | health와 운영 endpoint 기반 | 사용 중 |
 | Backend | Validation | 요청 값 검증 기반 | 사용 중 |
 | Backend | Lombok | Java boilerplate 감소 | 사용 중 |
+| Backend | Spring Data JPA | PostgreSQL 기반 관계형 데이터 접근 | 사용 중 |
+| Backend | PostgreSQL Driver | Spring Boot와 PostgreSQL 연결 | 사용 중 |
+| Backend | Flyway | 데이터베이스 schema migration | 사용 중 |
 | Backend | Spring Security | 인증과 인가 | 예정 |
 | Backend | Spring AI | AI 연동 추상화 검토 | 예정 |
-| Backend | Spring Data JPA | 관계형 데이터 접근 | 예정 |
 | Backend | Querydsl | 타입 안전 동적 쿼리 | 예정 |
 | Backend | Springdoc OpenAPI UI | API 문서화와 Swagger UI | 사용 중 |
-| Backend | Backend DB integration | Spring Boot와 PostgreSQL 연결 | 예정 |
-| AI | Ollama | 로컬 LLM 실행 | 로컬 인프라 구성 |
+| Backend | Backend DB integration | Spring Boot와 PostgreSQL 연결 | 사용 중 |
+| AI | Ollama | 로컬 LLM 실행 | 로컬 인프라 구성, 앱 미연동 |
 | AI | qwen2.5-coder 또는 llama3.2 | 로컬 LLM 후보 모델 | 검토 |
 | AI | local embedding model | 문서 임베딩 생성 | 예정 |
 | AI | RAG pipeline | 검색 증강 생성 흐름 | 예정 |
 | AI | prompt versioning | 프롬프트 변경 이력 관리 | 예정 |
 | AI | tool calling style internal actions | 내부 업무 액션 실행 구조 | 예정 |
-| Database / Storage | PostgreSQL | 주요 업무 데이터 저장 | 로컬 인프라 구성 |
-| Database / Storage | pgvector | 벡터 임베딩 저장과 유사도 검색 | 로컬 인프라 구성 |
-| Database / Storage | Redis | 캐시와 세션 또는 작업 큐 보조 | 로컬 인프라 구성 |
-| Database / Storage | MinIO | 문서 파일 객체 저장 | 로컬 인프라 구성 |
+| Database / Storage | PostgreSQL | 주요 업무 데이터 저장 | 로컬 인프라 구성 및 API 연결 |
+| Database / Storage | pgvector | 벡터 임베딩 저장과 유사도 검색 기반 | extension 구성, RAG 미사용 |
+| Database / Storage | Redis | 캐시와 세션 또는 작업 큐 보조 | 로컬 인프라 구성, 앱 미연동 |
+| Database / Storage | MinIO | 문서 파일 객체 저장 | 로컬 인프라 구성, 앱 미연동 |
 | Infra | Docker Engine | 로컬 컨테이너 실행 | 사용 중 |
 | Infra | Docker Compose | 로컬 통합 실행 환경 | 사용 중 |
 | Infra | Nginx | reverse proxy | 예정 |

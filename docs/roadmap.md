@@ -27,13 +27,24 @@
 
 ## Phase 2: Local Infrastructure with Docker Compose
 
-현재 진행 중인 단계입니다.
+기본 기반 구성을 마친 단계입니다.
 
 - Docker Compose 기반 PostgreSQL, Redis, MinIO, Ollama 실행
 - 로컬 개발용 환경 변수 정리
 - PostgreSQL pgvector extension 초기화 스크립트 구성
-- Spring Boot DB 연결은 후속 Phase에서 구현 예정
+- Spring Boot DB 연결은 Backend Persistence Foundation에서 진행
 - RAG pipeline과 Spring AI 연동은 후속 Phase에서 구현 예정
+
+## Phase 2.5: Backend Persistence Foundation
+
+현재 진행 중인 단계입니다.
+
+- Spring Boot datasource와 PostgreSQL 연결
+- Spring Data JPA, PostgreSQL Driver, Flyway 추가
+- `workspaces` 기본 테이블과 seed data migration 구성
+- `Workspace` entity와 repository 기반 조회 API 구성
+- health API에 database 상태 포함
+- Redis, MinIO, Ollama, Spring AI, RAG pipeline 연동은 후속 Phase에서 구현 예정
 
 ## Phase 3: Auth & RBAC
 

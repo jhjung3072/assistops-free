@@ -2,7 +2,7 @@
 
 `AssistOps Free`는 유료 AI API나 관리형 클라우드 서비스에 의존하지 않고, 로컬 LLM과 오픈소스 인프라만으로 동작하는 AI 업무 자동화 플랫폼을 목표로 하는 포트폴리오 프로젝트입니다.
 
-현재 단계는 **Local Infrastructure with Docker Compose**입니다. Next.js 프론트엔드 기반과 Spring Boot API 초기 골격은 구성되어 있으며, PostgreSQL + pgvector, Redis, MinIO, Ollama를 로컬 Docker Compose 서비스로 실행할 수 있게 정리하는 단계입니다. Spring Boot와 로컬 인프라 서비스는 아직 연결하지 않았습니다.
+현재 단계는 **Backend Persistence Foundation**입니다. Next.js 프론트엔드 기반, Spring Boot API 초기 골격, Docker Compose 기반 로컬 인프라가 구성되어 있으며, Spring Boot API가 PostgreSQL + pgvector에 연결되는 영속성 기반을 정리하는 단계입니다. Redis, MinIO, Ollama는 아직 애플리케이션 코드와 연결하지 않았습니다.
 
 ## 프로젝트 목표
 
@@ -24,10 +24,12 @@
 | Frontend           | Next.js App Router, React, TypeScript, Tailwind CSS, shadcn/ui                                                                                  | 사용 중   |
 | Frontend           | Radix UI, TanStack Query, Zustand, React Hook Form, Zod, React Flow, Recharts, Playwright                                                       | 예정      |
 | Backend            | Java 21, Spring Boot, Spring Web, Spring Boot Actuator, Validation, Lombok, Springdoc OpenAPI UI                                                | 사용 중   |
-| Backend            | Spring Security, Spring AI, Spring Data JPA, Querydsl                                                                                           | 예정      |
-| AI                 | Ollama                                                                                                                                          | 로컬 인프라 구성 |
+| Backend            | Spring Data JPA, PostgreSQL Driver, Flyway                                                                                                      | 사용 중   |
+| Backend            | Spring Security, Spring AI, Querydsl                                                                                                            | 예정      |
+| AI                 | Ollama                                                                                                                                          | 로컬 인프라 구성, 앱 미연동 |
 | AI                 | qwen2.5-coder 또는 llama3.2 계열 로컬 모델, local embedding model, RAG pipeline, prompt versioning, tool calling style internal actions          | 예정      |
-| Database / Storage | PostgreSQL, pgvector, Redis, MinIO                                                                                                              | 로컬 인프라 구성 |
+| Database / Storage | PostgreSQL, pgvector                                                                                                                            | 로컬 인프라 구성 및 API 연결 |
+| Database / Storage | Redis, MinIO                                                                                                                                    | 로컬 인프라 구성, 앱 미연동 |
 | Infra              | Docker Engine, Docker Compose, GitHub Actions                                                                                                   | 사용 중   |
 | Infra              | Nginx, Oracle Cloud Always Free 또는 local server                                                                                                | 예정      |
 | Monitoring         | OpenTelemetry, Prometheus, Grafana OSS, Loki                                                                                                    | 예정      |
@@ -37,6 +39,7 @@
 - `apps/web`: Next.js App Router 기반 프론트엔드 프로젝트 생성 완료
 - `apps/web`: shadcn/ui 초기화 및 기본 UI 컴포넌트 일부 적용
 - `apps/api`: Spring Boot API 초기 골격 및 `GET /api/health` 구현
+- `apps/api`: PostgreSQL datasource, Flyway migration, JPA 기반 `workspaces` 조회 API 구성
 - `docker-compose.yml`: PostgreSQL + pgvector, Redis, MinIO, Ollama 로컬 인프라 실행 구성
 - `infra/postgres/init`: PostgreSQL 시작 시 pgvector extension 활성화 SQL 추가
 - 루트 `pnpm-workspace.yaml`: `apps/web` workspace 등록
@@ -48,8 +51,8 @@
 아직 구현하지 않은 영역:
 
 - 실제 인증 및 권한 처리
-- 데이터 영속성 계층
-- Spring Boot와 PostgreSQL, Redis, MinIO, Ollama 연결
+- 사용자, 문서, RAG 등 실제 도메인 영속성 계층 확장
+- Spring Boot와 Redis, MinIO, Ollama 연결
 - RAG, Agent UI, Workflow Builder
 - OpenTelemetry, Prometheus, Grafana, Loki 관측성
 
@@ -72,6 +75,7 @@ pnpm build:web
 백엔드 API는 Gradle Wrapper로 실행합니다.
 
 ```bash
+pnpm infra:up
 cd apps/api
 ./gradlew bootRun
 ```
@@ -89,7 +93,7 @@ cd apps/api
 ./gradlew test
 ```
 
-현재 백엔드는 health API와 기본 실행 구조만 있습니다. 인증, 데이터베이스 연결, 로컬 AI 연동, Docker Compose 인프라와의 애플리케이션 연결은 향후 구현 예정입니다.
+현재 백엔드는 PostgreSQL 연결과 `workspaces` 조회 API까지 구성되어 있습니다. 인증, Redis, MinIO, Ollama, RAG 연동은 향후 구현 예정입니다.
 
 ## 로컬 인프라 실행 방법
 
@@ -106,15 +110,16 @@ pnpm infra:down
 
 | 서비스 | 접속 정보 |
 | --- | --- |
-| PostgreSQL | `localhost:5432` |
+| PostgreSQL | `localhost:5432`, database `assistops`, user `assistops`, password `assistops` |
 | Redis | `localhost:6379` |
 | MinIO API | `http://localhost:9000` |
 | MinIO Console | `http://localhost:9001` |
 | Ollama | `http://localhost:11434` |
 
 개발용 계정과 비밀번호는 `.env.example`에 예시로만 제공합니다. 이 값은 로컬 개발용 기본값이며 운영용으로 사용하지 않습니다. 실제 `.env` 파일은 커밋하지 않습니다.
+로컬에 다른 PostgreSQL이 이미 `5432` 포트를 사용 중이라면 `.env`의 `DB_PORT` 값을 변경해 Docker Compose PostgreSQL의 host port를 조정할 수 있습니다.
 
-현재 Spring Boot API는 위 인프라 서비스와 아직 연결되어 있지 않습니다. datasource, Redis client, MinIO SDK, Ollama API 호출은 후속 단계에서 추가할 예정입니다.
+현재 Spring Boot API는 PostgreSQL에만 연결되어 있습니다. Redis client, MinIO SDK, Spring AI, Ollama API 호출은 후속 단계에서 추가할 예정입니다.
 
 ## 향후 구현 예정 기능
 

@@ -1,12 +1,12 @@
 package com.assistops.api.global.health;
 
-public record HealthResponse(String status, String service, String phase) {
+public record HealthResponse(String status, String service, String phase, String database) {
 
 	private static final String OK_STATUS = "OK";
 	private static final String SERVICE_NAME = "assistops-api";
-	private static final String CURRENT_PHASE = "Phase 1 - Spring Boot API Foundation";
+	private static final String CURRENT_PHASE = "Backend Persistence Foundation";
 
-	public static HealthResponse ok() {
-		return new HealthResponse(OK_STATUS, SERVICE_NAME, CURRENT_PHASE);
+	public static HealthResponse ok(String database) {
+		return new HealthResponse(OK_STATUS, SERVICE_NAME, CURRENT_PHASE, database);
 	}
 }
