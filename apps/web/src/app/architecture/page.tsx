@@ -7,19 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-
-const currentItems = ["Next.js frontend"] as const;
-
-const plannedItems = [
-  "Spring Boot API",
-  "PostgreSQL",
-  "pgvector",
-  "Redis",
-  "MinIO",
-  "Ollama",
-  "Docker Compose",
-  "Monitoring",
-] as const;
+import { architectureItems } from "@/constants/project";
 
 export default function ArchitecturePage() {
   return (
@@ -44,7 +32,7 @@ export default function ArchitecturePage() {
             </CardHeader>
             <CardContent>
               <ul className="grid gap-2 text-sm text-muted-foreground">
-                {currentItems.map((item) => (
+                {architectureItems.current.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
@@ -57,7 +45,7 @@ export default function ArchitecturePage() {
             </CardHeader>
             <CardContent>
               <ul className="grid gap-2 text-sm text-muted-foreground">
-                {plannedItems.map((item) => (
+                {architectureItems.planned.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>

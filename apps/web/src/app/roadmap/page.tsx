@@ -7,20 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-
-const roadmapPhases = [
-  "Phase 0: Monorepo & Frontend Foundation",
-  "Phase 1: Spring Boot API Foundation",
-  "Phase 2: Local Infrastructure with Docker Compose",
-  "Phase 3: Auth & RBAC",
-  "Phase 4: Document Upload & Storage",
-  "Phase 5: RAG Pipeline with Ollama and pgvector",
-  "Phase 6: Agent Chat UI",
-  "Phase 7: Workflow Builder",
-  "Phase 8: AI Release Copilot",
-  "Phase 9: Monitoring & Observability",
-  "Phase 10: Deployment & Portfolio Polish",
-] as const;
+import { roadmapPhases } from "@/constants/project";
 
 export default function RoadmapPage() {
   return (
