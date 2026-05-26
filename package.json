@@ -12,6 +12,7 @@
     "build:api": "cd apps/api && ./gradlew build",
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down",
+    "infra:reset": "docker compose down -v && docker compose up -d",
     "infra:logs": "docker compose logs -f",
     "infra:ps": "docker compose ps"
   }

@@ -11,15 +11,18 @@
 | Frontend | shadcn/ui | 재사용 가능한 UI 컴포넌트 기반 | 사용 중 |
 | Frontend | Base UI | 현재 shadcn/ui preset의 headless UI 기반 | 사용 중 |
 | Frontend | Radix UI | shadcn/ui 컴포넌트 확장 시 사용할 수 있는 headless UI primitive | 예정 |
-| Frontend | TanStack Query | 서버 상태 관리와 API 캐싱 | 예정 |
-| Frontend | Zustand | 클라이언트 상태 관리 | 예정 |
-| Frontend | React Hook Form | 폼 상태 관리 | 예정 |
-| Frontend | Zod | schema validation | 예정 |
+| Frontend | TanStack Query | auth/workspace API 요청 상태 관리 | 사용 중 |
+| Frontend | Zustand | 사용자 인증 상태 관리 | 사용 중 |
+| Frontend | Frontend Cookie Token Storage | accessToken을 browser cookie에 저장하고 API client가 Authorization header로 전달 | 사용 중 |
+| Frontend | localStorage Token Storage | accessToken 저장 방식 | 사용하지 않음 |
+| Frontend | HttpOnly Cookie Auth | 운영용 인증 보안 개선 후보 | 예정 |
+| Frontend | React Hook Form | 로그인/회원가입 폼 상태 관리 | 사용 중 |
+| Frontend | Zod | 로그인/회원가입 입력값 검증 | 사용 중 |
 | Frontend | React Flow | workflow builder 그래프 UI | 예정 |
 | Frontend | Recharts | dashboard chart 시각화 | 예정 |
 | Frontend | Playwright | E2E 테스트 | 예정 |
 | Frontend | lucide-react | 아이콘 컴포넌트 | 사용 중 |
-| Frontend | class-variance-authority | UI variant 스타일 구성 | 예정 |
+| Frontend | class-variance-authority | UI variant 스타일 구성 | 사용 중 |
 | Frontend | clsx | 조건부 className 조합 | 사용 중 |
 | Frontend | tailwind-merge | Tailwind className 병합 | 사용 중 |
 | Backend | Java 21 | 백엔드 런타임 | 사용 중 |
@@ -32,7 +35,7 @@
 | Backend | PostgreSQL Driver | Spring Boot와 PostgreSQL 연결 | 사용 중 |
 | Backend | Flyway | 데이터베이스 schema migration | 사용 중 |
 | Backend | Spring Security | stateless API 인증과 인가 기반 | 사용 중 |
-| Backend | JWT | access token 기반 인증 | 사용 중 |
+| Backend | JWT Bearer Auth | JSON body로 발급한 accessToken을 Authorization Bearer header로 인증 | 사용 중 |
 | Backend | BCrypt | 사용자 password hashing | 사용 중 |
 | Backend | RBAC | workspace membership 기반 권한 모델 | 기반 구성 |
 | Backend | Spring AI | AI 연동 추상화 검토 | 예정 |
@@ -45,7 +48,7 @@
 | AI | RAG pipeline | 검색 증강 생성 흐름 | 예정 |
 | AI | prompt versioning | 프롬프트 변경 이력 관리 | 예정 |
 | AI | tool calling style internal actions | 내부 업무 액션 실행 구조 | 예정 |
-| Database / Storage | PostgreSQL | 주요 업무 데이터 저장 | 로컬 인프라 구성 및 API 연결 |
+| Database / Storage | PostgreSQL | 주요 업무 데이터 저장. Docker named volume 사용 | 로컬 인프라 구성 및 API 연결 |
 | Database / Storage | pgvector | 벡터 임베딩 저장과 유사도 검색 기반 | extension 구성, RAG 미사용 |
 | Database / Storage | Redis | 캐시와 세션 또는 작업 큐 보조 | 예정, 로컬 인프라 구성 |
 | Database / Storage | MinIO | 문서 파일 객체 저장 | 예정, 로컬 인프라 구성 |

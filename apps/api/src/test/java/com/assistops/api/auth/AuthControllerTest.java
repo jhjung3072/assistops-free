@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -49,6 +50,7 @@ class AuthControllerTest extends AbstractPostgresContainerTest {
 				.content(objectMapper.writeValueAsString(registerBody(email))))
 			.andExpect(status().isCreated())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE))
 			.andExpect(jsonPath("$.accessToken").exists())
 			.andExpect(jsonPath("$.tokenType").value("Bearer"))
 			.andExpect(jsonPath("$.user.email").value(email))
@@ -87,6 +89,7 @@ class AuthControllerTest extends AbstractPostgresContainerTest {
 				.content(objectMapper.writeValueAsString(loginBody(email, PASSWORD))))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE))
 			.andExpect(jsonPath("$.accessToken").exists())
 			.andExpect(jsonPath("$.tokenType").value("Bearer"))
 			.andExpect(jsonPath("$.user.email").value(email))
@@ -106,7 +109,7 @@ class AuthControllerTest extends AbstractPostgresContainerTest {
 	}
 
 	@Test
-	void meSucceedsWithAuthentication() throws Exception {
+	void meSucceedsWithBearerAuthentication() throws Exception {
 		String email = uniqueEmail();
 		String accessToken = registerAndGetToken(email);
 
@@ -118,6 +121,12 @@ class AuthControllerTest extends AbstractPostgresContainerTest {
 			.andExpect(jsonPath("$.name").value("Test User"))
 			.andExpect(jsonPath("$.role").value("USER"))
 			.andExpect(jsonPath("$.passwordHash").doesNotExist());
+	}
+
+	@Test
+	void meFailsWithoutAuthentication() throws Exception {
+		mockMvc.perform(get("/api/auth/me"))
+			.andExpect(status().isUnauthorized());
 	}
 
 	private String registerAndGetToken(String email) throws Exception {

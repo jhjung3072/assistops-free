@@ -16,12 +16,12 @@ export default function RoadmapPage() {
       <AppShell>
         <section className="max-w-3xl">
           <Badge variant="outline" className="mb-5">
-            Current Phase: Phase 0
+            Current Phase: Frontend Auth Integration
           </Badge>
           <h1 className="text-3xl font-semibold sm:text-4xl">개발 로드맵</h1>
           <p className="mt-4 text-muted-foreground">
-            현재 단계는 Phase 0: Monorepo & Frontend Foundation입니다. 이후
-            단계는 아직 구현 예정입니다.
+            현재 단계는 백엔드 JWT 인증 API를 프론트엔드 화면과 연결하는
+            단계입니다. refresh token과 세부 RBAC UI는 후속 단계에서 다룹니다.
           </p>
         </section>
 
@@ -31,12 +31,14 @@ export default function RoadmapPage() {
               <CardHeader>
                 <CardTitle className="flex flex-wrap items-center gap-2">
                   {phase}
-                  {index === 0 ? <Badge>현재 단계</Badge> : null}
+                  {index === 4 ? <Badge>현재 단계</Badge> : null}
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground">
-                {index === 0
-                  ? "프론트엔드 앱 기반과 문서화 구조를 정리하는 단계입니다."
+                {index < 4
+                  ? "기본 기반을 구성한 단계입니다."
+                  : index === 4
+                    ? "로그인, 회원가입, 인증 보호 dashboard를 연결하는 단계입니다."
                   : "향후 구현 예정 단계입니다."}
               </CardContent>
             </Card>

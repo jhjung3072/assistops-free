@@ -1,6 +1,13 @@
-import Link from "next/link";
+"use client";
 
+import { LogIn, LogOut } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+
+import { Button, buttonVariants } from "@/components/ui/button";
 import { PROJECT_NAME } from "@/constants/project";
+import { useAuthStore } from "@/stores/auth-store";
 
 const navItems = [
   {
@@ -15,9 +22,28 @@ const navItems = [
     label: "Architecture",
     href: "/architecture",
   },
+  {
+    label: "Dashboard",
+    href: "/dashboard",
+  },
 ] as const;
 
 export function AppHeader() {
+  const router = useRouter();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isInitialized = useAuthStore((state) => state.isInitialized);
+  const initializeAuth = useAuthStore((state) => state.initializeAuth);
+  const clearUser = useAuthStore((state) => state.clearUser);
+
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
+
+  function handleLogout() {
+    clearUser();
+    router.push("/login");
+  }
+
   return (
     <header className="border-b bg-background">
       <div className="mx-auto flex min-h-14 w-full max-w-6xl flex-col items-start justify-center gap-2 px-6 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-8 lg:px-10">
@@ -37,6 +63,20 @@ export function AppHeader() {
               {item.label}
             </Link>
           ))}
+          {isInitialized && isAuthenticated ? (
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              <LogOut aria-hidden="true" />
+              Logout
+            </Button>
+          ) : (
+            <Link
+              href="/login"
+              className={buttonVariants({ variant: "ghost", size: "sm" })}
+            >
+              <LogIn aria-hidden="true" />
+              Login
+            </Link>
+          )}
         </nav>
       </div>
     </header>

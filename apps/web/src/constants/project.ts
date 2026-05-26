@@ -12,7 +12,7 @@ export const statusCards = [
   {
     id: "backend",
     title: "Backend",
-    status: "Planned",
+    status: "Auth Ready",
   },
   {
     id: "local-ai",
@@ -22,7 +22,7 @@ export const statusCards = [
   {
     id: "database",
     title: "Database",
-    status: "Planned",
+    status: "Connected",
   },
   {
     id: "monitoring",
@@ -62,7 +62,8 @@ export const roadmapPhases = [
   "Phase 0: Monorepo & Frontend Foundation",
   "Phase 1: Spring Boot API Foundation",
   "Phase 2: Local Infrastructure with Docker Compose",
-  "Phase 3: Auth & RBAC",
+  "Phase 3: Auth & RBAC Foundation",
+  "Phase 3.5: Frontend Auth Integration",
   "Phase 4: Document Upload & Storage",
   "Phase 5: RAG Pipeline with Ollama and pgvector",
   "Phase 6: Agent Chat UI",
@@ -73,16 +74,24 @@ export const roadmapPhases = [
 ] as const;
 
 export const architectureItems = {
-  current: ["Next.js frontend", "shadcn/ui 기반 UI foundation"],
-  planned: [
+  current: [
+    "Next.js frontend",
     "Spring Boot API",
-    "PostgreSQL + pgvector",
+    "JWT Auth API",
+    "Frontend Auth UI",
+    "Dashboard 초기 화면",
+    "Workspace 목록 조회",
+  ],
+  planned: [
+    "Refresh token",
+    "Workspace switcher",
+    "Document upload",
+    "RAG pipeline",
+    "Ollama integration",
+    "Workflow Builder",
     "Redis",
     "MinIO",
-    "Ollama",
-    "Docker Compose",
     "Nginx",
-    "GitHub Actions",
     "OpenTelemetry",
     "Prometheus",
     "Grafana",

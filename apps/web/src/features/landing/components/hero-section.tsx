@@ -1,4 +1,4 @@
-import { FileText, Network, Route } from "lucide-react";
+import { FileText, Network, Route, UserPlus } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +19,14 @@ export function HeroSection() {
         {PROJECT_DESCRIPTION}
       </p>
       <div className="mt-7 flex flex-wrap gap-3">
-        <Link href="/roadmap" className={buttonVariants({ size: "lg" })}>
+        <Link href="/register" className={buttonVariants({ size: "lg" })}>
+          <UserPlus aria-hidden="true" />
+          Get Started
+        </Link>
+        <Link
+          href="/roadmap"
+          className={buttonVariants({ variant: "outline", size: "lg" })}
+        >
           <Route aria-hidden="true" />
           View Roadmap
         </Link>

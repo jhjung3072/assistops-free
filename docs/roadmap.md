@@ -48,17 +48,32 @@
 
 ## Phase 3: Auth & RBAC Foundation
 
-현재 진행 중인 단계입니다.
+기본 기반 구성을 마친 단계입니다.
 
 - Spring Security 기반 stateless 인증 구조 구성
-- JWT access token 기반 로그인 유지 구성
+- JWT accessToken JSON body 발급과 Authorization Bearer header 인증 구성
 - BCrypt password hashing 구성
 - `users` 테이블과 JPA entity/repository 구성
 - `workspace_members` 테이블과 workspace membership 역할 골격 구성
 - `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me` 구현
 - 회원가입 시 seed `Default Workspace`에 `MEMBER` membership 연결
 - 인증/인가 테스트 추가
-- 프론트엔드 로그인 화면, refresh token, 사용자별 workspace filtering, 세부 RBAC policy는 후속 작업으로 유지
+- refresh token, 사용자별 workspace filtering, 세부 RBAC policy는 후속 작업으로 유지
+
+## Phase 3.5: Frontend Auth Integration
+
+현재 진행 중인 단계입니다.
+
+- 로그인 화면 구현
+- 회원가입 화면 구현
+- cookie token storage 기반 API client 구성
+- Zustand 기반 사용자 상태와 `/api/auth/me` 인증 상태 복원 구성
+- TanStack Query 기반 현재 사용자 조회와 workspace 목록 조회 구성
+- 인증 보호 dashboard 구현
+- AppHeader의 Dashboard/Login/Logout 진입점 구성
+- localStorage token 저장 방식에서 browser cookie 저장 방식으로 개선
+- 현재 cookie는 JavaScript가 읽고 쓰는 non-HttpOnly cookie
+- refresh token, HttpOnly Cookie 또는 BFF 인증 구조, 세부 RBAC UI, workspace switching은 후속 작업으로 유지
 
 ## Phase 4: Document Upload & Storage
 

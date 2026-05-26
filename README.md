@@ -2,7 +2,7 @@
 
 `AssistOps Free`는 유료 AI API나 관리형 클라우드 서비스에 의존하지 않고, 로컬 LLM과 오픈소스 인프라만으로 동작하는 AI 업무 자동화 플랫폼을 목표로 하는 포트폴리오 프로젝트입니다.
 
-현재 단계는 **Auth & RBAC Foundation**입니다. Next.js 프론트엔드 기반, Spring Boot API, Docker Compose 기반 로컬 인프라, PostgreSQL + pgvector 연결, Flyway/JPA 영속성 기반, JWT 인증 기반이 구성되어 있습니다. Redis, MinIO, Ollama는 아직 애플리케이션 코드와 연결하지 않았습니다.
+현재 단계는 **Frontend Auth Integration**입니다. Next.js 프론트엔드, Spring Boot API, Docker Compose 기반 로컬 인프라, PostgreSQL + pgvector 연결, Flyway/JPA 영속성 기반, JWT Bearer 인증 API, 프론트엔드 cookie token storage 기반 로그인/회원가입/dashboard 화면이 구성되어 있습니다. Redis, MinIO, Ollama는 아직 애플리케이션 코드와 연결하지 않았습니다.
 
 ## 프로젝트 목표
 
@@ -22,7 +22,8 @@
 | 영역               | 기술                                                                                                                                            | 현재 상태 |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | Frontend           | Next.js App Router, React, TypeScript, Tailwind CSS, shadcn/ui                                                                                  | 사용 중   |
-| Frontend           | Radix UI, TanStack Query, Zustand, React Hook Form, Zod, React Flow, Recharts, Playwright                                                       | 예정      |
+| Frontend           | TanStack Query, Zustand, React Hook Form, Zod                                                                                                   | 사용 중   |
+| Frontend           | Radix UI, React Flow, Recharts, Playwright                                                                                                      | 예정      |
 | Backend            | Java 21, Spring Boot, Spring Web, Spring Boot Actuator, Validation, Lombok, Springdoc OpenAPI UI                                                | 사용 중   |
 | Backend            | Spring Data JPA, PostgreSQL Driver, Flyway                                                                                                      | 사용 중   |
 | Backend            | Spring Security, JWT, BCrypt                                                                                                                    | 사용 중   |
@@ -40,6 +41,8 @@
 
 - `apps/web`: Next.js App Router 기반 프론트엔드 프로젝트 생성 완료
 - `apps/web`: shadcn/ui 초기화 및 기본 UI 컴포넌트 일부 적용
+- `apps/web`: 로그인, 회원가입, 인증 보호 dashboard, workspace 목록 조회 화면 구성
+- `apps/web`: cookie에서 accessToken을 읽어 Authorization header를 붙이는 fetch API client, TanStack Query, Zustand auth store 연동
 - `apps/api`: Spring Boot API 초기 골격 및 `GET /api/health` 구현
 - `apps/api`: PostgreSQL datasource, Flyway migration, JPA 기반 `workspaces` 조회 API 구성
 - `apps/api`: Spring Security, JWT, BCrypt 기반 인증 API 구성
@@ -49,14 +52,15 @@
 - 루트 `pnpm-workspace.yaml`: `apps/web` workspace 등록
 - 루트 `package.json`: 프론트엔드 실행, 빌드, 린트 스크립트 추가
 - GitHub Actions: 프론트엔드 lint/build, API test/build 자동 검증 workflow 구성
-- 프론트엔드 주요 라이브러리: 의존성 설치 완료, 실제 기능 적용은 예정
+- 프론트엔드 주요 라이브러리: TanStack Query, Zustand, React Hook Form, Zod를 인증 화면에 적용
 - 문서: 프로젝트 목표 아키텍처, 로드맵, 기술 스택, 작성 규칙 정리
 
 아직 구현하지 않은 영역:
 
-- 프론트엔드 로그인 화면
 - refresh token 저장소와 token rotation
+- HttpOnly Cookie 또는 BFF 기반 운영용 인증 구조
 - 사용자별 workspace filtering
+- workspace switching UI
 - 세부 RBAC policy
 - 문서, RAG 등 실제 도메인 영속성 계층 확장
 - Spring Boot와 Redis, MinIO, Ollama 연결
@@ -69,7 +73,16 @@
 
 ```bash
 pnpm install
+pnpm infra:up
+pnpm dev:api
 pnpm dev:web
+```
+
+API 확인:
+
+```bash
+curl http://localhost:8080/api/health
+curl http://localhost:8080/actuator/health
 ```
 
 검증 명령어:
@@ -77,19 +90,31 @@ pnpm dev:web
 ```bash
 pnpm lint:web
 pnpm build:web
+pnpm test:api
+pnpm build:api
 ```
 
-백엔드 API는 Gradle Wrapper로 실행합니다.
+프론트엔드 API base URL은 `apps/web/.env.example`을 기준으로 설정합니다.
 
-```bash
-pnpm infra:up
-pnpm dev:api
+```env
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
 ```
+
+실제 `apps/web/.env.local`은 커밋하지 않습니다.
+
+확인 가능한 화면:
+
+| Path | 설명 |
+| --- | --- |
+| `/login` | 로그인 화면 |
+| `/register` | 회원가입 화면 |
+| `/dashboard` | 인증된 사용자 dashboard와 workspace 목록 |
 
 Health API 확인:
 
 ```bash
 curl http://localhost:8080/api/health
+curl http://localhost:8080/actuator/health
 ```
 
 Swagger UI 확인:
@@ -120,8 +145,8 @@ curl http://localhost:8080/api/workspaces \
 
 | Method | Endpoint | 설명 |
 | --- | --- | --- |
-| `POST` | `/api/auth/register` | 회원가입 후 access token 반환 |
-| `POST` | `/api/auth/login` | email/password 로그인 후 access token 반환 |
+| `POST` | `/api/auth/register` | 회원가입 후 JWT accessToken을 JSON body로 반환 |
+| `POST` | `/api/auth/login` | email/password 로그인 후 JWT accessToken을 JSON body로 반환 |
 | `GET` | `/api/auth/me` | 현재 인증된 사용자 정보 반환 |
 
 백엔드 테스트:
@@ -131,6 +156,10 @@ pnpm test:api
 ```
 
 현재 백엔드는 PostgreSQL 연결, `workspaces` 조회 API, JWT 기반 인증 API까지 구성되어 있습니다. `/api/workspaces`는 인증된 사용자만 접근할 수 있지만, 사용자별 workspace filtering은 다음 단계에서 구현할 예정입니다. refresh token, 세부 RBAC policy, Redis, MinIO, Ollama, RAG 연동은 아직 구현하지 않았습니다.
+
+현재 인증은 백엔드가 JWT accessToken을 JSON 응답 body로 내려주고, 프론트엔드가 해당 토큰을 `assistops_access_token` browser cookie에 저장하는 방식입니다. 프론트엔드는 accessToken을 `localStorage`나 `sessionStorage`에 저장하지 않습니다. API 요청 시 cookie에서 token을 읽어 `Authorization: Bearer <token>` header를 추가하고, 로그인 상태 복원은 `GET /api/auth/me` 응답으로 판단합니다.
+
+현재 cookie는 프론트엔드 JavaScript가 읽고 쓰는 cookie이므로 `HttpOnly`가 아닙니다. 개발 환경 기본값은 `SameSite=Lax`, `Secure=false`, `Path=/`, `Max-Age=3600`입니다. 운영 수준 보안에서는 HttpOnly Cookie 또는 BFF 패턴, refresh token, token rotation, XSS 방어, CSRF 방어를 추가로 검토해야 합니다.
 
 ## 로컬 인프라 실행 방법
 
@@ -143,28 +172,78 @@ pnpm infra:logs
 pnpm infra:down
 ```
 
+개발용 PostgreSQL volume을 완전히 삭제하고 처음부터 다시 초기화해야 할 때만 아래 명령을 사용합니다.
+
+```bash
+pnpm infra:reset
+```
+
+`pnpm infra:reset`은 내부적으로 `docker compose down -v && docker compose up -d`를 실행합니다. 이 명령은 Docker named volume의 PostgreSQL 데이터를 삭제하므로 로컬 개발 데이터가 사라집니다. 실제 운영 DB나 보존해야 하는 데이터가 있는 환경에서는 절대 사용하지 않습니다.
+
 개발용 접속 정보:
 
 | 서비스 | 접속 정보 |
 | --- | --- |
-| PostgreSQL | `localhost:5432`, database `assistops`, user `assistops`, password `assistops` |
+| PostgreSQL | `localhost:15432`, database `assistops`, user `assistops`, password `assistops` |
 | Redis | `localhost:6379` |
 | MinIO API | `http://localhost:9000` |
 | MinIO Console | `http://localhost:9001` |
 | Ollama | `http://localhost:11434` |
 
 개발용 계정과 비밀번호는 `.env.example`에 예시로만 제공합니다. 이 값은 로컬 개발용 기본값이며 운영용으로 사용하지 않습니다. 실제 `.env` 파일은 커밋하지 않습니다.
-로컬에 다른 PostgreSQL이 이미 `5432` 포트를 사용 중이라면 `.env`의 `DB_PORT` 값을 변경해 Docker Compose PostgreSQL의 host port를 조정할 수 있습니다.
+PostgreSQL 컨테이너 최초 초기화에는 `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`가 사용되고, Spring Boot datasource에는 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`가 사용됩니다. 로컬 기본값은 모두 `assistops`로 맞춰져 있습니다.
+Docker Compose PostgreSQL은 로컬 PostgreSQL과 충돌하지 않도록 기본 host port를 `15432`로 사용합니다. 필요하면 `.env`의 `DB_PORT` 값으로 Docker Compose PostgreSQL의 host port를 조정할 수 있습니다.
 JWT 개발용 secret도 `.env.example`에 예시로만 제공합니다. 운영 환경에서는 `JWT_SECRET`을 충분히 긴 비밀값으로 반드시 override해야 합니다.
 
 현재 Spring Boot API는 PostgreSQL에만 연결되어 있습니다. Redis client, MinIO SDK, Spring AI, Ollama API 호출은 후속 단계에서 추가할 예정입니다.
 
+## Troubleshooting
+
+### `FATAL: role "assistops" does not exist`
+
+`pnpm dev:api` 실행 중 Flyway가 PostgreSQL에 연결하지 못하고 `FATAL: role "assistops" does not exist`가 발생하면, Docker named volume이 예전 PostgreSQL 설정으로 이미 초기화되어 있을 가능성이 큽니다.
+
+PostgreSQL Docker image는 data directory가 비어 있을 때만 `POSTGRES_USER`, `POSTGRES_DB`, `/docker-entrypoint-initdb.d` 초기화 스크립트를 적용합니다. 이미 named volume이 만들어진 뒤에는 `docker-compose.yml`이나 `.env`의 `POSTGRES_USER` 값을 변경해도 기존 DB role에는 반영되지 않습니다.
+
+로컬 개발 데이터 삭제가 가능하다면 아래 중 하나로 volume을 초기화합니다.
+
+```bash
+pnpm infra:down
+docker compose down -v
+pnpm infra:up
+```
+
+또는 한 번에 실행합니다.
+
+```bash
+pnpm infra:reset
+```
+
+주의: `docker compose down -v`와 `pnpm infra:reset`은 PostgreSQL 데이터를 삭제합니다. 실제 운영 DB, 공유 개발 DB, 보존해야 하는 로컬 데이터에는 사용하지 않습니다.
+
+reset 후에도 같은 오류가 계속된다면 로컬 머신의 다른 PostgreSQL이 Spring Boot datasource port를 먼저 사용 중인지 확인합니다.
+
+```bash
+lsof -nP -iTCP:15432 -sTCP:LISTEN
+```
+
+Docker 컨테이너 내부에서는 `assistops` role이 존재하지만 `localhost:15432` 접속만 실패한다면, 다른 프로세스가 Docker PostgreSQL을 가리고 있을 수 있습니다. 이 경우 로컬 `.env`에서 `DB_PORT`를 다른 값으로 바꾸고 인프라와 API를 같은 포트로 실행합니다.
+
+```bash
+DB_PORT=25432 pnpm infra:reset
+DB_PORT=25432 pnpm dev:api
+```
+
+로컬 `.env`를 사용할 경우에도 실제 `.env` 파일은 커밋하지 않습니다.
+
 ## 향후 구현 예정 기능
 
-- 프론트엔드 로그인 화면
+- refresh token과 token rotation
+- HttpOnly Cookie 또는 BFF 기반 운영용 인증 개선
+- XSS/CSRF 방어 강화
 - 사용자별 workspace filtering
+- workspace switching UI
 - 세부 RBAC policy
-- refresh token 저장소
 - 문서 업로드 및 MinIO 저장
 - PostgreSQL + pgvector 기반 임베딩 저장소
 - Ollama 기반 로컬 LLM 질의 응답
