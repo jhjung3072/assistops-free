@@ -16,7 +16,7 @@
 
 ## Phase 1: Spring Boot API Foundation
 
-현재 진행 중인 단계입니다.
+기본 기반 구성을 마친 단계입니다.
 
 - `apps/api` Spring Boot 프로젝트 생성
 - Java 21 기반 개발 환경 구성
@@ -27,11 +27,13 @@
 
 ## Phase 2: Local Infrastructure with Docker Compose
 
-향후 구현 예정입니다.
+현재 진행 중인 단계입니다.
 
 - Docker Compose 기반 PostgreSQL, Redis, MinIO, Ollama 실행
 - 로컬 개발용 환경 변수 정리
-- 데이터 초기화 스크립트와 개발 프로파일 구성
+- PostgreSQL pgvector extension 초기화 스크립트 구성
+- Spring Boot DB 연결은 후속 Phase에서 구현 예정
+- RAG pipeline과 Spring AI 연동은 후속 Phase에서 구현 예정
 
 ## Phase 3: Auth & RBAC
 

@@ -1,11 +1,12 @@
 # Architecture
 
-이 문서는 `AssistOps Free`의 목표 아키텍처를 정리합니다. 현재 구현된 영역은 `apps/web` 프론트엔드 기반과 `apps/api` Spring Boot API 초기 골격이며, 인프라, AI, 데이터베이스, 관측성 구성은 향후 구현 예정입니다.
+이 문서는 `AssistOps Free`의 목표 아키텍처를 정리합니다. 현재 구현된 영역은 `apps/web` 프론트엔드 기반, `apps/api` Spring Boot API 초기 골격, Docker Compose 기반 로컬 인프라 실행 구성입니다. Spring Boot API와 PostgreSQL, Redis, MinIO, Ollama는 아직 연결하지 않았습니다.
 
 ## 현재 단계
 
 - `apps/web`: Next.js App Router 기반 프론트엔드 사용 중
 - `apps/api`: Spring Boot API foundation 진행 중
+- Docker Compose: PostgreSQL + pgvector, Redis, MinIO, Ollama 로컬 실행 구성
 - 루트 workspace: `apps/web` 등록
 - 문서화: 목표 아키텍처와 로드맵 작성 중
 
@@ -15,11 +16,11 @@
 flowchart LR
   user[User] --> nginx[Nginx 예정]
   nginx --> web[apps/web Next.js]
-  web --> api[apps/api Spring Boot foundation]
-  api --> postgres[(PostgreSQL + pgvector 예정)]
-  api --> redis[(Redis 예정)]
-  api --> minio[(MinIO 예정)]
-  api --> ollama[Ollama 예정]
+  web -. 향후 API 호출 .-> api[apps/api Spring Boot foundation]
+  api -. 향후 연결 .-> postgres[(PostgreSQL + pgvector)]
+  api -. 향후 연결 .-> redis[(Redis)]
+  api -. 향후 연결 .-> minio[(MinIO)]
+  api -. 향후 연결 .-> ollama[Ollama]
   api --> otel[OpenTelemetry 예정]
   otel --> prometheus[Prometheus 예정]
   otel --> loki[Loki 예정]
@@ -34,11 +35,11 @@ flowchart LR
 | --- | --- | --- |
 | `apps/web` | Next.js App Router 기반 프론트엔드 | 사용 중 |
 | `apps/api` | Spring Boot 기반 백엔드 API 초기 골격과 health API | 사용 중 |
-| PostgreSQL + pgvector | 업무 데이터와 벡터 임베딩 저장 | 예정 |
-| Redis | 캐시, 세션, 비동기 작업 보조 저장소 | 예정 |
-| MinIO | 업로드 문서와 파일 객체 저장 | 예정 |
-| Ollama | 로컬 LLM 실행 및 추론 | 예정 |
-| Docker Compose | 로컬 통합 실행 환경 | 예정 |
+| PostgreSQL + pgvector | 업무 데이터와 벡터 임베딩 저장 | 로컬 인프라 구성, 앱 미연동 |
+| Redis | 캐시, 세션, 비동기 작업 보조 저장소 | 로컬 인프라 구성, 앱 미연동 |
+| MinIO | 업로드 문서와 파일 객체 저장 | 로컬 인프라 구성, 앱 미연동 |
+| Ollama | 로컬 LLM 실행 및 추론 | 로컬 인프라 구성, 앱 미연동 |
+| Docker Compose | 로컬 통합 실행 환경 | 사용 중 |
 | Nginx | reverse proxy 및 정적 자원 서빙 | 예정 |
 | GitHub Actions | 프론트엔드 lint/build CI, API CI는 향후 확장 | 일부 사용 중 |
 | OpenTelemetry | trace, metric, log 수집 표준화 | 예정 |
@@ -56,6 +57,20 @@ flowchart LR
 6. RAG 요청은 PostgreSQL + pgvector 검색 결과와 Ollama 로컬 LLM을 조합해 처리합니다.
 7. 시스템 지표, 로그, trace는 OpenTelemetry 기반으로 수집하고 Prometheus, Loki, Grafana로 확인합니다.
 
+## Local Infrastructure
+
+현재 Docker Compose로 실행할 수 있는 로컬 인프라 서비스는 다음과 같습니다.
+
+| 서비스 | 포트 | 현재 연결 상태 |
+| --- | --- | --- |
+| PostgreSQL + pgvector | `5432` | Spring Boot와 미연결 |
+| Redis | `6379` | Spring Boot와 미연결 |
+| MinIO API | `9000` | Spring Boot와 미연결 |
+| MinIO Console | `9001` | Spring Boot와 미연결 |
+| Ollama | `11434` | Spring Boot와 미연결 |
+
+이번 단계는 컨테이너 실행 기반만 다룹니다. Spring Data JPA, PostgreSQL Driver, Redis client, MinIO SDK, Spring AI, Ollama API 호출은 아직 추가하지 않았습니다.
+
 ## 구현 상태 구분
 
-현재 이 문서는 목표 아키텍처를 설명합니다. 실제 구현 완료로 볼 수 있는 범위는 Next.js 프론트엔드 기반, Spring Boot API 초기 골격, health API, 프론트엔드 Web CI까지입니다.
+현재 이 문서는 목표 아키텍처를 설명합니다. 실제 구현 완료로 볼 수 있는 범위는 Next.js 프론트엔드 기반, Spring Boot API 초기 골격, health API, 프론트엔드 Web CI, Docker Compose 로컬 인프라 실행 구성까지입니다.
