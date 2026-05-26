@@ -2,7 +2,7 @@
 
 `AssistOps Free`는 유료 AI API나 관리형 클라우드 서비스에 의존하지 않고, 로컬 LLM과 오픈소스 인프라만으로 동작하는 AI 업무 자동화 플랫폼을 목표로 하는 포트폴리오 프로젝트입니다.
 
-현재 단계는 **Backend Persistence Foundation**입니다. Next.js 프론트엔드 기반, Spring Boot API 초기 골격, Docker Compose 기반 로컬 인프라가 구성되어 있으며, Spring Boot API가 PostgreSQL + pgvector에 연결되는 영속성 기반을 정리하는 단계입니다. Redis, MinIO, Ollama는 아직 애플리케이션 코드와 연결하지 않았습니다.
+현재 단계는 **Auth & RBAC Foundation**입니다. Next.js 프론트엔드 기반, Spring Boot API, Docker Compose 기반 로컬 인프라, PostgreSQL + pgvector 연결, Flyway/JPA 영속성 기반, JWT 인증 기반이 구성되어 있습니다. Redis, MinIO, Ollama는 아직 애플리케이션 코드와 연결하지 않았습니다.
 
 ## 프로젝트 목표
 
@@ -25,7 +25,9 @@
 | Frontend           | Radix UI, TanStack Query, Zustand, React Hook Form, Zod, React Flow, Recharts, Playwright                                                       | 예정      |
 | Backend            | Java 21, Spring Boot, Spring Web, Spring Boot Actuator, Validation, Lombok, Springdoc OpenAPI UI                                                | 사용 중   |
 | Backend            | Spring Data JPA, PostgreSQL Driver, Flyway                                                                                                      | 사용 중   |
-| Backend            | Spring Security, Spring AI, Querydsl                                                                                                            | 예정      |
+| Backend            | Spring Security, JWT, BCrypt                                                                                                                    | 사용 중   |
+| Backend            | Workspace membership 기반 RBAC foundation                                                                                                       | 기반 구성 |
+| Backend            | Spring AI, Querydsl                                                                                                                             | 예정      |
 | AI                 | Ollama                                                                                                                                          | 로컬 인프라 구성, 앱 미연동 |
 | AI                 | qwen2.5-coder 또는 llama3.2 계열 로컬 모델, local embedding model, RAG pipeline, prompt versioning, tool calling style internal actions          | 예정      |
 | Database / Storage | PostgreSQL, pgvector                                                                                                                            | 로컬 인프라 구성 및 API 연결 |
@@ -40,18 +42,23 @@
 - `apps/web`: shadcn/ui 초기화 및 기본 UI 컴포넌트 일부 적용
 - `apps/api`: Spring Boot API 초기 골격 및 `GET /api/health` 구현
 - `apps/api`: PostgreSQL datasource, Flyway migration, JPA 기반 `workspaces` 조회 API 구성
+- `apps/api`: Spring Security, JWT, BCrypt 기반 인증 API 구성
+- `apps/api`: `users`, `workspace_members` 테이블과 workspace membership 기반 RBAC 최소 골격 구성
 - `docker-compose.yml`: PostgreSQL + pgvector, Redis, MinIO, Ollama 로컬 인프라 실행 구성
 - `infra/postgres/init`: PostgreSQL 시작 시 pgvector extension 활성화 SQL 추가
 - 루트 `pnpm-workspace.yaml`: `apps/web` workspace 등록
 - 루트 `package.json`: 프론트엔드 실행, 빌드, 린트 스크립트 추가
-- GitHub Actions: 프론트엔드 lint/build 자동 검증 workflow 구성
+- GitHub Actions: 프론트엔드 lint/build, API test/build 자동 검증 workflow 구성
 - 프론트엔드 주요 라이브러리: 의존성 설치 완료, 실제 기능 적용은 예정
 - 문서: 프로젝트 목표 아키텍처, 로드맵, 기술 스택, 작성 규칙 정리
 
 아직 구현하지 않은 영역:
 
-- 실제 인증 및 권한 처리
-- 사용자, 문서, RAG 등 실제 도메인 영속성 계층 확장
+- 프론트엔드 로그인 화면
+- refresh token 저장소와 token rotation
+- 사용자별 workspace filtering
+- 세부 RBAC policy
+- 문서, RAG 등 실제 도메인 영속성 계층 확장
 - Spring Boot와 Redis, MinIO, Ollama 연결
 - RAG, Agent UI, Workflow Builder
 - OpenTelemetry, Prometheus, Grafana, Loki 관측성
@@ -76,8 +83,7 @@ pnpm build:web
 
 ```bash
 pnpm infra:up
-cd apps/api
-./gradlew bootRun
+pnpm dev:api
 ```
 
 Health API 확인:
@@ -86,14 +92,45 @@ Health API 확인:
 curl http://localhost:8080/api/health
 ```
 
+Swagger UI 확인:
+
+```text
+http://localhost:8080/swagger-ui/index.html
+```
+
+Auth API 수동 확인:
+
+```bash
+curl -X POST http://localhost:8080/api/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"local@example.com","password":"password123","name":"Local User"}'
+
+curl -X POST http://localhost:8080/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"local@example.com","password":"password123"}'
+
+curl http://localhost:8080/api/auth/me \
+  -H 'Authorization: Bearer <accessToken>'
+
+curl http://localhost:8080/api/workspaces \
+  -H 'Authorization: Bearer <accessToken>'
+```
+
+주요 Auth endpoint:
+
+| Method | Endpoint | 설명 |
+| --- | --- | --- |
+| `POST` | `/api/auth/register` | 회원가입 후 access token 반환 |
+| `POST` | `/api/auth/login` | email/password 로그인 후 access token 반환 |
+| `GET` | `/api/auth/me` | 현재 인증된 사용자 정보 반환 |
+
 백엔드 테스트:
 
 ```bash
-cd apps/api
-./gradlew test
+pnpm test:api
 ```
 
-현재 백엔드는 PostgreSQL 연결과 `workspaces` 조회 API까지 구성되어 있습니다. 인증, Redis, MinIO, Ollama, RAG 연동은 향후 구현 예정입니다.
+현재 백엔드는 PostgreSQL 연결, `workspaces` 조회 API, JWT 기반 인증 API까지 구성되어 있습니다. `/api/workspaces`는 인증된 사용자만 접근할 수 있지만, 사용자별 workspace filtering은 다음 단계에서 구현할 예정입니다. refresh token, 세부 RBAC policy, Redis, MinIO, Ollama, RAG 연동은 아직 구현하지 않았습니다.
 
 ## 로컬 인프라 실행 방법
 
@@ -118,13 +155,16 @@ pnpm infra:down
 
 개발용 계정과 비밀번호는 `.env.example`에 예시로만 제공합니다. 이 값은 로컬 개발용 기본값이며 운영용으로 사용하지 않습니다. 실제 `.env` 파일은 커밋하지 않습니다.
 로컬에 다른 PostgreSQL이 이미 `5432` 포트를 사용 중이라면 `.env`의 `DB_PORT` 값을 변경해 Docker Compose PostgreSQL의 host port를 조정할 수 있습니다.
+JWT 개발용 secret도 `.env.example`에 예시로만 제공합니다. 운영 환경에서는 `JWT_SECRET`을 충분히 긴 비밀값으로 반드시 override해야 합니다.
 
 현재 Spring Boot API는 PostgreSQL에만 연결되어 있습니다. Redis client, MinIO SDK, Spring AI, Ollama API 호출은 후속 단계에서 추가할 예정입니다.
 
 ## 향후 구현 예정 기능
 
-- Spring Boot API 기능 확장
-- 인증 및 RBAC 기반 사용자 권한 모델
+- 프론트엔드 로그인 화면
+- 사용자별 workspace filtering
+- 세부 RBAC policy
+- refresh token 저장소
 - 문서 업로드 및 MinIO 저장
 - PostgreSQL + pgvector 기반 임베딩 저장소
 - Ollama 기반 로컬 LLM 질의 응답

@@ -22,7 +22,7 @@
 - Java 21 기반 개발 환경 구성
 - `GET /api/health` health API 구현
 - Spring Boot 테스트 기반 구성
-- API 공통 응답, 예외 처리, validation 구조 정리 예정
+- validation과 최소 전역 예외 처리 구성
 - Springdoc OpenAPI 세부 문서화 정리 예정
 
 ## Phase 2: Local Infrastructure with Docker Compose
@@ -37,7 +37,7 @@
 
 ## Phase 2.5: Backend Persistence Foundation
 
-현재 진행 중인 단계입니다.
+기본 기반 구성을 마친 단계입니다.
 
 - Spring Boot datasource와 PostgreSQL 연결
 - Spring Data JPA, PostgreSQL Driver, Flyway 추가
@@ -46,13 +46,19 @@
 - health API에 database 상태 포함
 - Redis, MinIO, Ollama, Spring AI, RAG pipeline 연동은 후속 Phase에서 구현 예정
 
-## Phase 3: Auth & RBAC
+## Phase 3: Auth & RBAC Foundation
 
-향후 구현 예정입니다.
+현재 진행 중인 단계입니다.
 
-- Spring Security 기반 인증 구조
-- 사용자, 조직, 역할, 권한 모델
-- 관리자와 일반 사용자 권한 분리
+- Spring Security 기반 stateless 인증 구조 구성
+- JWT access token 기반 로그인 유지 구성
+- BCrypt password hashing 구성
+- `users` 테이블과 JPA entity/repository 구성
+- `workspace_members` 테이블과 workspace membership 역할 골격 구성
+- `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me` 구현
+- 회원가입 시 seed `Default Workspace`에 `MEMBER` membership 연결
+- 인증/인가 테스트 추가
+- 프론트엔드 로그인 화면, refresh token, 사용자별 workspace filtering, 세부 RBAC policy는 후속 작업으로 유지
 
 ## Phase 4: Document Upload & Storage
 

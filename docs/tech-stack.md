@@ -31,7 +31,10 @@
 | Backend | Spring Data JPA | PostgreSQL 기반 관계형 데이터 접근 | 사용 중 |
 | Backend | PostgreSQL Driver | Spring Boot와 PostgreSQL 연결 | 사용 중 |
 | Backend | Flyway | 데이터베이스 schema migration | 사용 중 |
-| Backend | Spring Security | 인증과 인가 | 예정 |
+| Backend | Spring Security | stateless API 인증과 인가 기반 | 사용 중 |
+| Backend | JWT | access token 기반 인증 | 사용 중 |
+| Backend | BCrypt | 사용자 password hashing | 사용 중 |
+| Backend | RBAC | workspace membership 기반 권한 모델 | 기반 구성 |
 | Backend | Spring AI | AI 연동 추상화 검토 | 예정 |
 | Backend | Querydsl | 타입 안전 동적 쿼리 | 예정 |
 | Backend | Springdoc OpenAPI UI | API 문서화와 Swagger UI | 사용 중 |
@@ -44,12 +47,12 @@
 | AI | tool calling style internal actions | 내부 업무 액션 실행 구조 | 예정 |
 | Database / Storage | PostgreSQL | 주요 업무 데이터 저장 | 로컬 인프라 구성 및 API 연결 |
 | Database / Storage | pgvector | 벡터 임베딩 저장과 유사도 검색 기반 | extension 구성, RAG 미사용 |
-| Database / Storage | Redis | 캐시와 세션 또는 작업 큐 보조 | 로컬 인프라 구성, 앱 미연동 |
-| Database / Storage | MinIO | 문서 파일 객체 저장 | 로컬 인프라 구성, 앱 미연동 |
+| Database / Storage | Redis | 캐시와 세션 또는 작업 큐 보조 | 예정, 로컬 인프라 구성 |
+| Database / Storage | MinIO | 문서 파일 객체 저장 | 예정, 로컬 인프라 구성 |
 | Infra | Docker Engine | 로컬 컨테이너 실행 | 사용 중 |
 | Infra | Docker Compose | 로컬 통합 실행 환경 | 사용 중 |
 | Infra | Nginx | reverse proxy | 예정 |
-| Infra | GitHub Actions | CI 자동화 | 예정 |
+| Infra | GitHub Actions | Web lint/build와 API test/build CI 자동화 | 사용 중 |
 | Infra | Oracle Cloud Always Free 또는 local server | 무료 또는 로컬 배포 환경 | 검토 |
 | Monitoring | OpenTelemetry | trace, metric, log 수집 표준 | 예정 |
 | Monitoring | Prometheus | metric 저장과 조회 | 예정 |
