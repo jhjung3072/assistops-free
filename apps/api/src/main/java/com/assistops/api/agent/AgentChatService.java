@@ -31,6 +31,7 @@ public class AgentChatService {
 	private static final int TITLE_MAX_LENGTH = 255;
 
 	private final AgentChatSessionRepository sessionRepository;
+	private final AgentChatSessionQueryRepository sessionQueryRepository;
 	private final AgentChatMessageRepository messageRepository;
 	private final AgentChatMessageSourceRepository sourceRepository;
 	private final WorkspaceMemberRepository workspaceMemberRepository;
@@ -40,6 +41,7 @@ public class AgentChatService {
 
 	public AgentChatService(
 		AgentChatSessionRepository sessionRepository,
+		AgentChatSessionQueryRepository sessionQueryRepository,
 		AgentChatMessageRepository messageRepository,
 		AgentChatMessageSourceRepository sourceRepository,
 		WorkspaceMemberRepository workspaceMemberRepository,
@@ -48,6 +50,7 @@ public class AgentChatService {
 		TransactionTemplate transactionTemplate
 	) {
 		this.sessionRepository = sessionRepository;
+		this.sessionQueryRepository = sessionQueryRepository;
 		this.messageRepository = messageRepository;
 		this.sourceRepository = sourceRepository;
 		this.workspaceMemberRepository = workspaceMemberRepository;
@@ -75,13 +78,11 @@ public class AgentChatService {
 	}
 
 	@Transactional(readOnly = true)
-	public AgentChatSessionListResponse getSessions(User user) {
-		List<AgentChatSessionSummaryResponse> sessions = sessionRepository.findByUserIdOrderByUpdatedAtDesc(user.getId())
-			.stream()
-			.map(AgentChatSessionSummaryResponse::from)
-			.toList();
-
-		return new AgentChatSessionListResponse(sessions);
+	public AgentChatSessionListResponse getSessions(User user, AgentChatSessionSearchCondition condition) {
+		return AgentChatSessionListResponse.from(
+			sessionQueryRepository.search(user.getId(), condition)
+				.map(AgentChatSessionSummaryResponse::from)
+		);
 	}
 
 	@Transactional(readOnly = true)

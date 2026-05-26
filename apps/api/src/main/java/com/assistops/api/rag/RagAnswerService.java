@@ -28,6 +28,7 @@ public class RagAnswerService {
 	private final RagGenerationService ragGenerationService;
 	private final RagProperties ragProperties;
 	private final RagAnswerRepository ragAnswerRepository;
+	private final RagAnswerQueryRepository ragAnswerQueryRepository;
 	private final RagAnswerSourceRepository ragAnswerSourceRepository;
 	private final WorkspaceMemberRepository workspaceMemberRepository;
 
@@ -36,6 +37,7 @@ public class RagAnswerService {
 		RagGenerationService ragGenerationService,
 		RagProperties ragProperties,
 		RagAnswerRepository ragAnswerRepository,
+		RagAnswerQueryRepository ragAnswerQueryRepository,
 		RagAnswerSourceRepository ragAnswerSourceRepository,
 		WorkspaceMemberRepository workspaceMemberRepository
 	) {
@@ -43,6 +45,7 @@ public class RagAnswerService {
 		this.ragGenerationService = ragGenerationService;
 		this.ragProperties = ragProperties;
 		this.ragAnswerRepository = ragAnswerRepository;
+		this.ragAnswerQueryRepository = ragAnswerQueryRepository;
 		this.ragAnswerSourceRepository = ragAnswerSourceRepository;
 		this.workspaceMemberRepository = workspaceMemberRepository;
 	}
@@ -171,18 +174,16 @@ public class RagAnswerService {
 	}
 
 	@Transactional(readOnly = true)
-	public RagAnswerListResponse getAnswers(User user) {
+	public RagAnswerListResponse getAnswers(User user, RagAnswerSearchCondition condition) {
 		List<UUID> workspaceIds = accessibleWorkspaceIds(user.getId());
-		List<RagAnswerSummary> answers = ragAnswerRepository
-			.findByUserIdAndWorkspaceIdInOrderByCreatedAtDesc(user.getId(), workspaceIds)
-			.stream()
-			.map(answer -> RagAnswerSummary.from(
-				answer,
-				ragAnswerSourceRepository.countByRagAnswerId(answer.getId())
-			))
-			.toList();
 
-		return new RagAnswerListResponse(answers);
+		return RagAnswerListResponse.from(
+			ragAnswerQueryRepository.search(user.getId(), workspaceIds, condition)
+				.map(answer -> RagAnswerSummary.from(
+					answer,
+					ragAnswerSourceRepository.countByRagAnswerId(answer.getId())
+				))
+		);
 	}
 
 	public String modelName() {

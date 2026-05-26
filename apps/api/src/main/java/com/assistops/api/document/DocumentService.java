@@ -28,15 +28,18 @@ public class DocumentService {
 	private static final String OCTET_STREAM = "application/octet-stream";
 
 	private final DocumentRepository documentRepository;
+	private final DocumentQueryRepository documentQueryRepository;
 	private final WorkspaceMemberRepository workspaceMemberRepository;
 	private final DocumentStorageService documentStorageService;
 
 	public DocumentService(
 		DocumentRepository documentRepository,
+		DocumentQueryRepository documentQueryRepository,
 		WorkspaceMemberRepository workspaceMemberRepository,
 		DocumentStorageService documentStorageService
 	) {
 		this.documentRepository = documentRepository;
+		this.documentQueryRepository = documentQueryRepository;
 		this.workspaceMemberRepository = workspaceMemberRepository;
 		this.documentStorageService = documentStorageService;
 	}
@@ -62,15 +65,12 @@ public class DocumentService {
 	}
 
 	@Transactional(readOnly = true)
-	public DocumentListResponse getDocuments(User user) {
+	public DocumentListResponse getDocuments(User user, DocumentSearchCondition condition) {
 		List<UUID> workspaceIds = accessibleWorkspaceIds(user.getId());
-		List<DocumentResponse> documents = documentRepository
-			.findByWorkspaceIdInAndStatusNotOrderByCreatedAtDesc(workspaceIds, DocumentStatus.DELETED)
-			.stream()
-			.map(DocumentResponse::from)
-			.toList();
 
-		return new DocumentListResponse(documents);
+		return DocumentListResponse.from(
+			documentQueryRepository.search(workspaceIds, condition).map(DocumentResponse::from)
+		);
 	}
 
 	@Transactional(readOnly = true)

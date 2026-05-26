@@ -1,3 +1,5 @@
+import type { PageResponse } from "@/types/api";
+
 export type DocumentStatus =
   | "UPLOADED"
   | "PROCESSING"
@@ -36,6 +38,7 @@ export type DocumentUploadResponse = {
 
 export type DocumentListResponse = {
   documents: Document[];
+  page: PageResponse<Document>;
 };
 
 export type DocumentProcessingResponse = {

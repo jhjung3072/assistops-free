@@ -1,3 +1,5 @@
+import type { PageResponse } from "@/types/api";
+
 export type AgentChatRole = "USER" | "ASSISTANT" | "SYSTEM";
 
 export type AgentChatMessageSource = {
@@ -54,6 +56,7 @@ export type AgentChatSessionDetail = AgentChatSessionSummary & {
 
 export type AgentChatSessionListResponse = {
   sessions: AgentChatSessionSummary[];
+  page: PageResponse<AgentChatSessionSummary>;
 };
 
 export type AgentChatSessionCreateRequest = {

@@ -1,8 +1,19 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Eye, FileText, Play, Sparkles, Trash2 } from "lucide-react";
-import { useState } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Eye,
+  FileText,
+  Play,
+  RotateCcw,
+  Search,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
+import { type FormEvent, useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -13,9 +24,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   deleteDocument,
   downloadDocument,
+  type DocumentListParams,
   embedDocument,
   getDocuments,
   processDocument,
@@ -34,10 +48,19 @@ export function DocumentList({
 }: DocumentListProps) {
   const queryClient = useQueryClient();
   const [downloadError, setDownloadError] = useState<unknown>(null);
+  const [filters, setFilters] = useState<DocumentListParams>({
+    keyword: "",
+    status: "",
+    embeddingStatus: "",
+    page: 0,
+    size: 20,
+  });
+  const [draftFilters, setDraftFilters] =
+    useState<DocumentListParams>(filters);
 
   const documentsQuery = useQuery({
-    queryKey: ["documents"],
-    queryFn: getDocuments,
+    queryKey: ["documents", filters],
+    queryFn: () => getDocuments(filters),
     retry: false,
   });
 
@@ -70,6 +93,7 @@ export function DocumentList({
   });
 
   const documents = documentsQuery.data?.documents ?? [];
+  const page = documentsQuery.data?.page;
   const processingDocumentId = processMutation.isPending
     ? processMutation.variables
     : null;
@@ -95,12 +119,111 @@ export function DocumentList({
     }
   }
 
+  function handleSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFilters({
+      ...draftFilters,
+      page: 0,
+    });
+  }
+
+  function handleReset() {
+    const nextFilters: DocumentListParams = {
+      keyword: "",
+      status: "",
+      embeddingStatus: "",
+      page: 0,
+      size: 20,
+    };
+
+    setDraftFilters(nextFilters);
+    setFilters(nextFilters);
+  }
+
+  function handlePageChange(nextPage: number) {
+    setFilters((currentFilters) => ({
+      ...currentFilters,
+      page: Math.max(0, nextPage),
+    }));
+  }
+
   return (
     <section className="grid gap-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-xl font-semibold">문서 목록</h2>
-        <Badge variant="outline">{documents.length}</Badge>
+        <Badge variant="outline">{page?.totalElements ?? documents.length}</Badge>
       </div>
+
+      <form
+        onSubmit={handleSearch}
+        className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-[minmax(0,1fr)_180px_220px_auto] sm:items-end"
+      >
+        <div className="grid gap-2">
+          <Label htmlFor="document-keyword">Keyword</Label>
+          <Input
+            id="document-keyword"
+            value={draftFilters.keyword ?? ""}
+            onChange={(event) =>
+              setDraftFilters((currentFilters) => ({
+                ...currentFilters,
+                keyword: event.target.value,
+              }))
+            }
+            placeholder="파일명 검색"
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="document-status">Status</Label>
+          <select
+            id="document-status"
+            className="h-9 rounded-lg border border-input bg-background px-3 text-sm"
+            value={draftFilters.status ?? ""}
+            onChange={(event) =>
+              setDraftFilters((currentFilters) => ({
+                ...currentFilters,
+                status: event.target.value as DocumentListParams["status"],
+              }))
+            }
+          >
+            <option value="">All</option>
+            <option value="UPLOADED">UPLOADED</option>
+            <option value="PROCESSING">PROCESSING</option>
+            <option value="PROCESSED">PROCESSED</option>
+            <option value="FAILED">FAILED</option>
+          </select>
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="document-embedding-status">Embedding</Label>
+          <select
+            id="document-embedding-status"
+            className="h-9 rounded-lg border border-input bg-background px-3 text-sm"
+            value={draftFilters.embeddingStatus ?? ""}
+            onChange={(event) =>
+              setDraftFilters((currentFilters) => ({
+                ...currentFilters,
+                embeddingStatus: event.target
+                  .value as DocumentListParams["embeddingStatus"],
+              }))
+            }
+          >
+            <option value="">All</option>
+            <option value="NOT_EMBEDDED">NOT_EMBEDDED</option>
+            <option value="EMBEDDING">EMBEDDING</option>
+            <option value="EMBEDDED">EMBEDDED</option>
+            <option value="EMBEDDING_FAILED">EMBEDDING_FAILED</option>
+          </select>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit">
+            <Search aria-hidden="true" />
+            검색
+          </Button>
+          <Button type="button" variant="outline" onClick={handleReset}>
+            <RotateCcw aria-hidden="true" />
+            초기화
+          </Button>
+        </div>
+      </form>
 
       {documentsQuery.isError ? (
         <Alert variant="destructive">
@@ -162,7 +285,7 @@ export function DocumentList({
 
       {!documentsQuery.isLoading && documents.length === 0 ? (
         <p className="rounded-lg border bg-card px-4 py-3 text-sm text-muted-foreground">
-          아직 업로드된 문서가 없습니다.
+          조건에 맞는 문서가 없습니다.
         </p>
       ) : null}
 
@@ -327,6 +450,35 @@ export function DocumentList({
           </CardContent>
         </Card>
       ))}
+
+      {page ? (
+        <div className="flex flex-col gap-3 rounded-lg border bg-card px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-muted-foreground">
+            총 {page.totalElements.toLocaleString()}개 · {page.page + 1} /{" "}
+            {Math.max(page.totalPages, 1)} 페이지
+          </span>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(page.page - 1)}
+              disabled={!page.hasPrevious || documentsQuery.isFetching}
+            >
+              <ChevronLeft aria-hidden="true" />
+              이전
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(page.page + 1)}
+              disabled={!page.hasNext || documentsQuery.isFetching}
+            >
+              다음
+              <ChevronRight aria-hidden="true" />
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

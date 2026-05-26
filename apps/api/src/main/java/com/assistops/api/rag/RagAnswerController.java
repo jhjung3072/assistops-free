@@ -5,7 +5,9 @@ import com.assistops.api.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.time.LocalDateTime;
 import java.util.UUID;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "RAG")
@@ -38,8 +41,19 @@ public class RagAnswerController {
 
 	@Operation(summary = "List RAG answers")
 	@GetMapping("/answers")
-	public RagAnswerListResponse answers(@AuthenticationPrincipal CustomUserDetails userDetails) {
-		return ragAnswerService.getAnswers(currentUser(userDetails));
+	public RagAnswerListResponse answers(
+		@AuthenticationPrincipal CustomUserDetails userDetails,
+		@RequestParam(required = false) String keyword,
+		@RequestParam(required = false) String model,
+		@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime createdFrom,
+		@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime createdTo,
+		@RequestParam(required = false) Integer page,
+		@RequestParam(required = false) Integer size
+	) {
+		return ragAnswerService.getAnswers(
+			currentUser(userDetails),
+			new RagAnswerSearchCondition(keyword, model, createdFrom, createdTo, page, size)
+		);
 	}
 
 	@Operation(summary = "Get RAG answer")

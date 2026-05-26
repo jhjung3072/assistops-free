@@ -1,6 +1,6 @@
 # Architecture
 
-이 문서는 `AssistOps Free`의 목표 아키텍처를 정리합니다. 현재 구현된 영역은 `apps/web` 프론트엔드, `apps/api` Spring Boot API, Docker Compose 기반 로컬 인프라 실행 구성, Spring Boot API와 PostgreSQL 연결, JWT Bearer Auth API, Frontend Auth UI, Dashboard 초기 화면, Workspace 목록 조회, Document Upload UI, Document API, MinIO original file storage, Document Parsing, Document Chunking, Embedding generation, pgvector embedding storage, Semantic chunk search, RAG Answer generation, Source citation, Agent Chat Session, Agent Message History, Agent Chat Streaming Response입니다. Redis Pub/Sub과 tool calling은 아직 애플리케이션 코드와 연결하지 않았습니다.
+이 문서는 `AssistOps Free`의 목표 아키텍처를 정리합니다. 현재 구현된 영역은 `apps/web` 프론트엔드, `apps/api` Spring Boot API, Docker Compose 기반 로컬 인프라 실행 구성, Spring Boot API와 PostgreSQL 연결, JWT Bearer Auth API, Frontend Auth UI, Dashboard 초기 화면, Workspace 목록 조회, Document Upload UI, Document API, MinIO original file storage, Document Parsing, Document Chunking, Embedding generation, pgvector embedding storage, Semantic chunk search, RAG Answer generation, Source citation, Agent Chat Session, Agent Message History, Agent Chat Streaming Response, Querydsl dynamic list filtering입니다. Redis Pub/Sub과 tool calling은 아직 애플리케이션 코드와 연결하지 않았습니다.
 
 ## 현재 단계
 
@@ -8,6 +8,7 @@
 - `apps/api`: Spring Boot API, PostgreSQL persistence foundation, JWT 인증, Document API, Document Parsing/Chunking, Embedding/Search, RAG Answer, Agent Chat 구성
 - Docker Compose: PostgreSQL + pgvector, Redis, MinIO, Ollama 로컬 실행 구성
 - PostgreSQL: Flyway migration, JPA `Workspace`, `User`, `WorkspaceMember`, `Document`, `DocumentChunk` entity 구성
+- Querying: 단순 CRUD는 Spring Data JPA, 동적 목록 조회는 Querydsl, pgvector 특화 연산은 native SQL/JDBC로 분리
 - MinIO: 원본 문서 object storage로 연결, 개발용 bucket 자동 초기화 구성
 - Document Processing: Apache Tika 기반 텍스트 추출, 문자 수 기반 chunking 구성
 - Embedding/Search: Spring AI Ollama로 `nomic-embed-text` embedding 생성, pgvector cosine distance 기반 chunk search 구성
@@ -73,6 +74,7 @@ flowchart LR
 | Agent Chat UI | RAG Answer를 세션형 채팅 UX로 저장하고 streaming 렌더링 | 사용 중 |
 | TanStack Query + Zustand | API 요청 상태와 사용자 인증 상태 관리 | 사용 중 |
 | PostgreSQL + pgvector | 업무 데이터, 문서 메타데이터, document chunks, embedding vector 저장과 cosine distance 검색 | 사용 중 |
+| Querydsl | 문서 목록, RAG 답변 이력, Agent Chat 세션 목록의 동적 검색/필터링/페이징 | 사용 중 |
 | Spring Security + JWT | stateless 인증과 API 보호 | 사용 중 |
 | Workspace membership | workspace 단위 권한 모델 기반 | 기반 구성 |
 | Redis | 캐시, 세션, 비동기 작업 보조 저장소 | 로컬 인프라 구성, 앱 미연동 |
@@ -117,7 +119,7 @@ flowchart LR
 | MinIO Console | `9001` | 개발 중 bucket/object 확인 |
 | Ollama | `11434` | Spring AI embedding/chat 호출에 연결 |
 
-현재 단계는 PostgreSQL 연결, JPA/Flyway 영속성 골격, JWT Bearer 인증 기반, workspace membership 기반 권한 골격, 프론트엔드 인증 화면, dashboard 초기 화면, 문서 업로드 및 원본 저장, 문서 텍스트 추출과 chunk 저장, Ollama embedding 생성, pgvector 유사 chunk 검색, Ollama chat model 기반 RAG 답변 생성, Agent Chat 세션 저장, Agent Chat streaming response까지 다룹니다. Redis client와 queue 기반 비동기 처리는 아직 추가하지 않았습니다.
+현재 단계는 PostgreSQL 연결, JPA/Flyway 영속성 골격, Querydsl 기반 동적 목록 조회, JWT Bearer 인증 기반, workspace membership 기반 권한 골격, 프론트엔드 인증 화면, dashboard 초기 화면, 문서 업로드 및 원본 저장, 문서 텍스트 추출과 chunk 저장, Ollama embedding 생성, pgvector 유사 chunk 검색, Ollama chat model 기반 RAG 답변 생성, Agent Chat 세션 저장, Agent Chat streaming response까지 다룹니다. Redis client와 queue 기반 비동기 처리는 아직 추가하지 않았습니다.
 
 ## 현재 문서 저장 흐름
 
@@ -137,6 +139,17 @@ flowchart LR
 14. `/api/agent/sessions/{id}/messages`는 USER 메시지를 저장하고 기존 RAG Answer Service로 ASSISTANT 답변을 생성한 뒤, 출처와 latency 핵심 지표를 메시지에 연결합니다.
 15. `/api/agent/sessions/{id}/messages/stream`은 같은 흐름을 SSE/fetch stream으로 제공하며, event type은 `metadata`, `source`, `token`, `latency`, `done`, `error`입니다.
 16. 목록/상세/다운로드/삭제/처리/chunk 조회/embedding/search/RAG/Agent API는 사용자가 속한 workspace 또는 본인 session에 대해서만 동작합니다.
+17. 문서 목록, RAG 답변 이력, Agent Chat 세션 목록은 Querydsl로 keyword/status/model/date/page/size 조건을 조합합니다.
+
+## 데이터 조회 전략
+
+| 조회 방식 | 적용 영역 | 이유 |
+| --- | --- | --- |
+| Spring Data JPA Repository | 단순 저장, 삭제, ID 조회, 짧은 조건 조회 | 가장 단순하고 충분한 CRUD 경로 |
+| Querydsl | 문서 목록, RAG 답변 이력, Agent Chat 세션 목록 | keyword, status, 기간, pagination 같은 동적 조건을 타입 안전하게 조합 |
+| native SQL/JDBC | `document_chunks.embedding` update, pgvector cosine distance search | pgvector operator와 vector literal처럼 PostgreSQL 특화 기능이 필요 |
+
+pgvector similarity search는 Querydsl로 억지 추상화하지 않고 native SQL/JDBC 기반을 유지합니다. Querydsl은 우선 화면 목록 조회와 필터링에만 적용합니다.
 
 현재 단계에서는 WebSocket, Redis Pub/Sub, multi-turn context memory, tool calling, prompt versioning UI, workflow automation, release copilot을 수행하지 않습니다.
 
@@ -154,6 +167,6 @@ PostgreSQL은 Docker named volume에 데이터를 저장합니다. 개발 중 `P
 
 ## 구현 상태 구분
 
-현재 이 문서는 목표 아키텍처를 설명합니다. 실제 구현 완료로 볼 수 있는 범위는 Next.js 프론트엔드, Spring Boot API, health API, JWT Auth API, 프론트엔드 로그인/회원가입/dashboard/documents/search/rag/agent 화면, 인증이 필요한 workspace 조회 API, 문서 업로드/목록/상세/다운로드/삭제/처리/chunk 조회/embedding/search/RAG answer/Agent Chat API, Agent Chat streaming API, PostgreSQL 연결, Flyway migration, JPA entity, workspace membership foundation, MinIO 원본 파일 저장, Apache Tika 텍스트 추출, document chunk 저장, Spring AI Ollama embedding/chat 호출, pgvector embedding 저장과 유사 chunk 검색, source citation, RAG answer history 저장, Agent Chat session/message history 저장, RAG latency metrics, prompt context 제한, Ollama generation option 적용, 프론트엔드 Web CI, API CI, Docker Compose 로컬 인프라 실행 구성까지입니다.
+현재 이 문서는 목표 아키텍처를 설명합니다. 실제 구현 완료로 볼 수 있는 범위는 Next.js 프론트엔드, Spring Boot API, health API, JWT Auth API, 프론트엔드 로그인/회원가입/dashboard/documents/search/rag/agent 화면, 인증이 필요한 workspace 조회 API, 문서 업로드/목록/상세/다운로드/삭제/처리/chunk 조회/embedding/search/RAG answer/Agent Chat API, Agent Chat streaming API, Querydsl 기반 동적 목록 조회, PostgreSQL 연결, Flyway migration, JPA entity, workspace membership foundation, MinIO 원본 파일 저장, Apache Tika 텍스트 추출, document chunk 저장, Spring AI Ollama embedding/chat 호출, pgvector embedding 저장과 유사 chunk 검색, source citation, RAG answer history 저장, Agent Chat session/message history 저장, RAG latency metrics, prompt context 제한, Ollama generation option 적용, 프론트엔드 Web CI, API CI, Docker Compose 로컬 인프라 실행 구성까지입니다.
 
 예정 영역은 refresh token, HttpOnly Cookie 또는 BFF 인증 구조 검토, XSS/CSRF 보안 강화, workspace switcher, 사용자별 workspace filtering, 세부 RBAC policy, WebSocket, Redis Pub/Sub, multi-turn context memory, tool calling, prompt versioning UI, workflow automation, release copilot, Redis session/cache/queue, Monitoring입니다.

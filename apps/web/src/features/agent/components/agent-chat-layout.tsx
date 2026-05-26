@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import {
+  type AgentSessionListParams,
   createAgentSession,
   deleteAgentSession,
   getAgentSession,
@@ -34,10 +35,15 @@ export function AgentChatLayout() {
   const [streamErrorMessage, setStreamErrorMessage] = useState<string | null>(
     null,
   );
+  const [sessionFilters, setSessionFilters] = useState<AgentSessionListParams>({
+    keyword: "",
+    page: 0,
+    size: 20,
+  });
 
   const sessionsQuery = useQuery({
-    queryKey: ["agent", "sessions"],
-    queryFn: getAgentSessions,
+    queryKey: ["agent", "sessions", sessionFilters],
+    queryFn: () => getAgentSessions(sessionFilters),
     retry: false,
   });
 
@@ -191,6 +197,7 @@ export function AgentChatLayout() {
   });
 
   const sessions = sessionsQuery.data?.sessions ?? [];
+  const sessionsPage = sessionsQuery.data?.page ?? null;
   const activeSessionId = selectedSessionId ?? sessions[0]?.id ?? null;
 
   const sessionQuery = useQuery({
@@ -225,8 +232,11 @@ export function AgentChatLayout() {
     <section className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
       <AgentSessionList
         sessions={sessions}
+        page={sessionsPage}
+        filters={sessionFilters}
         selectedSessionId={activeSessionId}
         isLoading={sessionsQuery.isLoading}
+        isFetching={sessionsQuery.isFetching}
         isCreating={createMutation.isPending}
         isDeleting={deleteMutation.isPending}
         onCreateSession={() => createMutation.mutate()}
@@ -236,6 +246,10 @@ export function AgentChatLayout() {
           setSelectedSessionId(sessionId);
         }}
         onDeleteSession={(sessionId) => deleteMutation.mutate(sessionId)}
+        onFilterChange={(nextFilters) => {
+          setSessionFilters(nextFilters);
+          setSelectedSessionId(null);
+        }}
       />
 
       <div className="grid content-start gap-4">

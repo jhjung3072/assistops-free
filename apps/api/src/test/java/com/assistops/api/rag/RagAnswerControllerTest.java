@@ -249,7 +249,90 @@ class RagAnswerControllerTest extends AbstractPostgresContainerTest {
 			.andExpect(jsonPath("$.answers[0].answerId").exists())
 			.andExpect(jsonPath("$.answers[0].question").value("질문"))
 			.andExpect(jsonPath("$.answers[0].sourceCount").value(1))
-			.andExpect(jsonPath("$.answers[0].totalMs").exists());
+			.andExpect(jsonPath("$.answers[0].totalMs").exists())
+			.andExpect(jsonPath("$.page.totalElements").value(1))
+			.andExpect(jsonPath("$.page.size").value(20));
+	}
+
+	@Test
+	void listAnswersFiltersByKeyword() throws Exception {
+		RegisteredUser registeredUser = register();
+		ChunkSearchResult source = createSourceResult(registeredUser);
+		given(chunkSearchService.searchWithMetrics(any(), any(ChunkSearchRequest.class)))
+			.willReturn(new ChunkSearchService.ChunkSearchResultWithMetrics(
+				new ChunkSearchResponse("질문", 5, List.of(source)),
+				11,
+				22
+			));
+		createAnswer(registeredUser.accessToken(), "릴리스 노트 요약");
+		createAnswer(registeredUser.accessToken(), "운영 절차 질문");
+
+		mockMvc.perform(get("/api/rag/answers")
+				.param("keyword", "릴리스")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + registeredUser.accessToken()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.answers.length()").value(1))
+			.andExpect(jsonPath("$.answers[0].question").value("릴리스 노트 요약"))
+			.andExpect(jsonPath("$.page.totalElements").value(1));
+	}
+
+	@Test
+	void listAnswersSupportsPaginationAndClampsSize() throws Exception {
+		RegisteredUser registeredUser = register();
+		ChunkSearchResult source = createSourceResult(registeredUser);
+		given(chunkSearchService.searchWithMetrics(any(), any(ChunkSearchRequest.class)))
+			.willReturn(new ChunkSearchService.ChunkSearchResultWithMetrics(
+				new ChunkSearchResponse("질문", 5, List.of(source)),
+				11,
+				22
+			));
+		createAnswer(registeredUser.accessToken(), "첫 질문");
+		createAnswer(registeredUser.accessToken(), "둘째 질문");
+		createAnswer(registeredUser.accessToken(), "셋째 질문");
+
+		mockMvc.perform(get("/api/rag/answers")
+				.param("page", "0")
+				.param("size", "2")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + registeredUser.accessToken()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.answers.length()").value(2))
+			.andExpect(jsonPath("$.page.totalElements").value(3))
+			.andExpect(jsonPath("$.page.totalPages").value(2))
+			.andExpect(jsonPath("$.page.hasNext").value(true));
+
+		mockMvc.perform(get("/api/rag/answers")
+				.param("size", "200")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + registeredUser.accessToken()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.page.size").value(100));
+	}
+
+	@Test
+	void listAnswersDoesNotExposeOtherUsersAnswers() throws Exception {
+		RegisteredUser owner = register();
+		RegisteredUser otherUser = register();
+		ChunkSearchResult ownerSource = createSourceResult(owner);
+		ChunkSearchResult otherSource = createSourceResult(otherUser);
+		given(chunkSearchService.searchWithMetrics(any(), any(ChunkSearchRequest.class)))
+			.willReturn(new ChunkSearchService.ChunkSearchResultWithMetrics(
+				new ChunkSearchResponse("질문", 5, List.of(ownerSource)),
+				11,
+				22
+			))
+			.willReturn(new ChunkSearchService.ChunkSearchResultWithMetrics(
+				new ChunkSearchResponse("질문", 5, List.of(otherSource)),
+				11,
+				22
+			));
+		createAnswer(owner.accessToken(), "owner question");
+		createAnswer(otherUser.accessToken(), "other question");
+
+		mockMvc.perform(get("/api/rag/answers")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + owner.accessToken()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.answers.length()").value(1))
+			.andExpect(jsonPath("$.answers[0].question").value("owner question"))
+			.andExpect(jsonPath("$.page.totalElements").value(1));
 	}
 
 	@Test
@@ -327,7 +410,7 @@ class RagAnswerControllerTest extends AbstractPostgresContainerTest {
 			workspaceId,
 			registeredUser.userId(),
 			"rag-notes.txt",
-			"documents/" + workspaceId + "/rag-notes.txt",
+			"documents/" + workspaceId + "/" + UUID.randomUUID() + "-rag-notes.txt",
 			"text/plain",
 			44
 		));

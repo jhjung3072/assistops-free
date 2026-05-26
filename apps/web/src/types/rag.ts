@@ -1,3 +1,5 @@
+import type { PageResponse } from "@/types/api";
+
 export type RagAnswerRequest = {
   question: string;
   topK?: number;
@@ -55,4 +57,5 @@ export type RagAnswerSummary = {
 
 export type RagAnswerListResponse = {
   answers: RagAnswerSummary[];
+  page: PageResponse<RagAnswerSummary>;
 };

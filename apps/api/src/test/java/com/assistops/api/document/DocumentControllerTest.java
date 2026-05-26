@@ -18,6 +18,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +29,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -50,6 +53,9 @@ class DocumentControllerTest extends AbstractPostgresContainerTest {
 
 	@Autowired
 	private DocumentRepository documentRepository;
+
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
 
 	@MockitoBean
 	private DocumentStorageService documentStorageService;
@@ -120,7 +126,90 @@ class DocumentControllerTest extends AbstractPostgresContainerTest {
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(jsonPath("$.documents[0].originalFilename").value("notes.txt"))
-			.andExpect(jsonPath("$.documents[0].status").value("UPLOADED"));
+			.andExpect(jsonPath("$.documents[0].status").value("UPLOADED"))
+			.andExpect(jsonPath("$.page.totalElements").value(1))
+			.andExpect(jsonPath("$.page.page").value(0))
+			.andExpect(jsonPath("$.page.size").value(20));
+	}
+
+	@Test
+	void listDocumentsFiltersByKeyword() throws Exception {
+		String accessToken = registerAndGetToken();
+		uploadDocument(accessToken, textFile("release-notes.md", "release"));
+		uploadDocument(accessToken, textFile("meeting-notes.txt", "meeting"));
+
+		mockMvc.perform(get("/api/documents")
+				.param("keyword", "release")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.documents.length()").value(1))
+			.andExpect(jsonPath("$.documents[0].originalFilename").value("release-notes.md"))
+			.andExpect(jsonPath("$.page.totalElements").value(1));
+	}
+
+	@Test
+	void listDocumentsFiltersByStatusAndEmbeddingStatus() throws Exception {
+		String accessToken = registerAndGetToken();
+		uploadDocument(accessToken, textFile("raw.txt", "raw"));
+		String processedDocumentId = uploadDocument(accessToken, textFile("processed.txt", "processed"));
+		processDocument(accessToken, processedDocumentId);
+		mockMvc.perform(post("/api/documents/{id}/embed", processedDocumentId)
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+			.andExpect(status().isOk());
+
+		mockMvc.perform(get("/api/documents")
+				.param("status", "PROCESSED")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.documents.length()").value(1))
+			.andExpect(jsonPath("$.documents[0].id").value(processedDocumentId))
+			.andExpect(jsonPath("$.documents[0].status").value("PROCESSED"));
+
+		mockMvc.perform(get("/api/documents")
+				.param("embeddingStatus", "EMBEDDED")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.documents.length()").value(1))
+			.andExpect(jsonPath("$.documents[0].id").value(processedDocumentId))
+			.andExpect(jsonPath("$.documents[0].embeddingStatus").value("EMBEDDED"));
+	}
+
+	@Test
+	void listDocumentsSupportsPaginationAndClampsSize() throws Exception {
+		String accessToken = registerAndGetToken();
+		uploadDocument(accessToken, textFile("first.txt", "first"));
+		uploadDocument(accessToken, textFile("second.txt", "second"));
+		uploadDocument(accessToken, textFile("third.txt", "third"));
+
+		mockMvc.perform(get("/api/documents")
+				.param("page", "0")
+				.param("size", "2")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.documents.length()").value(2))
+			.andExpect(jsonPath("$.page.totalElements").value(3))
+			.andExpect(jsonPath("$.page.totalPages").value(2))
+			.andExpect(jsonPath("$.page.hasNext").value(true));
+
+		mockMvc.perform(get("/api/documents")
+				.param("size", "200")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.page.size").value(100));
+	}
+
+	@Test
+	void listDocumentsDoesNotExposeInaccessibleWorkspaceDocuments() throws Exception {
+		RegisteredUser registeredUser = register();
+		uploadDocument(registeredUser.accessToken(), textFile("visible.txt", "visible"));
+		createInaccessibleDocument(registeredUser.userId());
+
+		mockMvc.perform(get("/api/documents")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + registeredUser.accessToken()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.documents.length()").value(1))
+			.andExpect(jsonPath("$.documents[0].originalFilename").value("visible.txt"))
+			.andExpect(jsonPath("$.page.totalElements").value(1));
 	}
 
 	@Test
@@ -305,8 +394,12 @@ class DocumentControllerTest extends AbstractPostgresContainerTest {
 	}
 
 	private String uploadDocument(String accessToken) throws Exception {
+		return uploadDocument(accessToken, textFile());
+	}
+
+	private String uploadDocument(String accessToken, MockMultipartFile file) throws Exception {
 		MvcResult result = mockMvc.perform(multipart("/api/documents")
-				.file(textFile())
+				.file(file)
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
 			.andExpect(status().isOk())
 			.andReturn();
@@ -321,6 +414,10 @@ class DocumentControllerTest extends AbstractPostgresContainerTest {
 	}
 
 	private String registerAndGetToken() throws Exception {
+		return register().accessToken();
+	}
+
+	private RegisteredUser register() throws Exception {
 		MvcResult result = mockMvc.perform(post("/api/auth/register")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(Map.of(
@@ -331,16 +428,46 @@ class DocumentControllerTest extends AbstractPostgresContainerTest {
 			.andExpect(status().isCreated())
 			.andReturn();
 
-		return JsonPath.read(result.getResponse().getContentAsString(), "$.accessToken");
+		String response = result.getResponse().getContentAsString();
+		return new RegisteredUser(
+			JsonPath.read(response, "$.accessToken"),
+			UUID.fromString(JsonPath.read(response, "$.user.id"))
+		);
 	}
 
 	private MockMultipartFile textFile() {
+		return textFile("notes.txt", "hello world");
+	}
+
+	private MockMultipartFile textFile(String filename, String content) {
 		return new MockMultipartFile(
 			"file",
-			"notes.txt",
+			filename,
 			"text/plain",
-			"hello world".getBytes(StandardCharsets.UTF_8)
+			content.getBytes(StandardCharsets.UTF_8)
 		);
+	}
+
+	private void createInaccessibleDocument(UUID userId) {
+		UUID workspaceId = UUID.randomUUID();
+		Timestamp timestamp = Timestamp.from(Instant.now());
+
+		jdbcTemplate.update(
+			"INSERT INTO workspaces (id, name, slug, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+			workspaceId,
+			"Private Document Workspace",
+			"private-documents-" + workspaceId,
+			timestamp,
+			timestamp
+		);
+		documentRepository.save(new Document(
+			workspaceId,
+			userId,
+			"hidden.txt",
+			"documents/" + workspaceId + "/hidden.txt",
+			"text/plain",
+			6
+		));
 	}
 
 	private ByteArrayInputStream textStream(String text) {
@@ -351,5 +478,8 @@ class DocumentControllerTest extends AbstractPostgresContainerTest {
 		float[] embedding = new float[768];
 		embedding[0] = 1.0f;
 		return embedding;
+	}
+
+	private record RegisteredUser(String accessToken, UUID userId) {
 	}
 }

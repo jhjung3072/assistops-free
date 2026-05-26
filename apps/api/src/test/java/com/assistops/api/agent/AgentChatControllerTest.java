@@ -131,7 +131,63 @@ class AgentChatControllerTest extends AbstractPostgresContainerTest {
 		mockMvc.perform(get("/api/agent/sessions")
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + user.accessToken()))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.sessions[0].title").value("첫 세션"));
+			.andExpect(jsonPath("$.sessions[0].title").value("첫 세션"))
+			.andExpect(jsonPath("$.page.totalElements").value(1))
+			.andExpect(jsonPath("$.page.size").value(20));
+	}
+
+	@Test
+	void listSessionsFiltersByKeyword() throws Exception {
+		RegisteredUser user = register();
+		createSession(user.accessToken(), "릴리스 검토");
+		createSession(user.accessToken(), "운영 질문");
+
+		mockMvc.perform(get("/api/agent/sessions")
+				.param("keyword", "릴리스")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + user.accessToken()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.sessions.length()").value(1))
+			.andExpect(jsonPath("$.sessions[0].title").value("릴리스 검토"))
+			.andExpect(jsonPath("$.page.totalElements").value(1));
+	}
+
+	@Test
+	void listSessionsSupportsPaginationAndClampsSize() throws Exception {
+		RegisteredUser user = register();
+		createSession(user.accessToken(), "첫 세션");
+		createSession(user.accessToken(), "둘째 세션");
+		createSession(user.accessToken(), "셋째 세션");
+
+		mockMvc.perform(get("/api/agent/sessions")
+				.param("page", "0")
+				.param("size", "2")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + user.accessToken()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.sessions.length()").value(2))
+			.andExpect(jsonPath("$.page.totalElements").value(3))
+			.andExpect(jsonPath("$.page.totalPages").value(2))
+			.andExpect(jsonPath("$.page.hasNext").value(true));
+
+		mockMvc.perform(get("/api/agent/sessions")
+				.param("size", "200")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + user.accessToken()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.page.size").value(100));
+	}
+
+	@Test
+	void listSessionsDoesNotExposeOtherUsersSessions() throws Exception {
+		RegisteredUser owner = register();
+		RegisteredUser otherUser = register();
+		createSession(owner.accessToken(), "owner session");
+		createSession(otherUser.accessToken(), "other session");
+
+		mockMvc.perform(get("/api/agent/sessions")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + owner.accessToken()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.sessions.length()").value(1))
+			.andExpect(jsonPath("$.sessions[0].title").value("owner session"))
+			.andExpect(jsonPath("$.page.totalElements").value(1));
 	}
 
 	@Test

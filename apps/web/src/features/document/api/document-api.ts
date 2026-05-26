@@ -1,17 +1,30 @@
 import { apiRequest, apiRequestBlob } from "@/lib/api/client";
+import { buildQueryString } from "@/lib/api/query-string";
 import type { ApiResponse } from "@/types/api";
 import type {
   Document,
+  DocumentEmbeddingStatus,
   DocumentChunkListResponse,
   DocumentEmbeddingResponse,
   DocumentListResponse,
   DocumentProcessingResponse,
+  DocumentStatus,
   DocumentUploadResponse,
 } from "@/types/document";
 
 export type UploadDocumentInput = {
   file: File;
   workspaceId?: string;
+};
+
+export type DocumentListParams = {
+  keyword?: string;
+  status?: DocumentStatus | "";
+  embeddingStatus?: DocumentEmbeddingStatus | "";
+  createdFrom?: string;
+  createdTo?: string;
+  page?: number;
+  size?: number;
 };
 
 export function uploadDocument({ file, workspaceId }: UploadDocumentInput) {
@@ -28,8 +41,10 @@ export function uploadDocument({ file, workspaceId }: UploadDocumentInput) {
   });
 }
 
-export function getDocuments() {
-  return apiRequest<ApiResponse<DocumentListResponse>>("/api/documents");
+export function getDocuments(params: DocumentListParams = {}) {
+  return apiRequest<ApiResponse<DocumentListResponse>>(
+    `/api/documents${buildQueryString(params)}`,
+  );
 }
 
 export function getDocument(id: string) {

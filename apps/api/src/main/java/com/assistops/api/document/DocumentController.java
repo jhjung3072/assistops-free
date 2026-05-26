@@ -7,8 +7,10 @@ import com.assistops.api.rag.DocumentEmbeddingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.UUID;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -56,9 +58,21 @@ public class DocumentController {
 
 	@Operation(summary = "List documents")
 	@GetMapping
-	public DocumentListResponse list(@AuthenticationPrincipal CustomUserDetails userDetails) {
+	public DocumentListResponse list(
+		@AuthenticationPrincipal CustomUserDetails userDetails,
+		@RequestParam(required = false) String keyword,
+		@RequestParam(required = false) DocumentStatus status,
+		@RequestParam(required = false) DocumentEmbeddingStatus embeddingStatus,
+		@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime createdFrom,
+		@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime createdTo,
+		@RequestParam(required = false) Integer page,
+		@RequestParam(required = false) Integer size
+	) {
 		// Workspace switcher가 추가되면 workspaceId query filter를 도입할 예정이다.
-		return documentService.getDocuments(currentUser(userDetails));
+		return documentService.getDocuments(
+			currentUser(userDetails),
+			new DocumentSearchCondition(keyword, status, embeddingStatus, createdFrom, createdTo, page, size)
+		);
 	}
 
 	@Operation(summary = "Get document")

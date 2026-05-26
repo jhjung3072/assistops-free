@@ -1,7 +1,15 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { History, Trash2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  History,
+  RotateCcw,
+  Search,
+  Trash2,
+} from "lucide-react";
+import { type FormEvent, useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -12,10 +20,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   deleteRagAnswer,
   getRagAnswer,
   getRagAnswers,
+  type RagAnswerListParams,
 } from "@/features/rag/api/rag-api";
 import { getApiErrorMessage } from "@/lib/api/client";
 import type { RagAnswerResponse } from "@/types/rag";
@@ -32,10 +43,18 @@ export function RagAnswerHistory({
   onDeleteSelected,
 }: RagAnswerHistoryProps) {
   const queryClient = useQueryClient();
+  const [filters, setFilters] = useState<RagAnswerListParams>({
+    keyword: "",
+    model: "",
+    page: 0,
+    size: 20,
+  });
+  const [draftFilters, setDraftFilters] =
+    useState<RagAnswerListParams>(filters);
 
   const answersQuery = useQuery({
-    queryKey: ["rag", "answers"],
-    queryFn: getRagAnswers,
+    queryKey: ["rag", "answers", filters],
+    queryFn: () => getRagAnswers(filters),
     retry: false,
   });
 
@@ -53,13 +72,85 @@ export function RagAnswerHistory({
   });
 
   const answers = answersQuery.data?.answers ?? [];
+  const page = answersQuery.data?.page;
+
+  function handleSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFilters({
+      ...draftFilters,
+      page: 0,
+    });
+  }
+
+  function handleReset() {
+    const nextFilters: RagAnswerListParams = {
+      keyword: "",
+      model: "",
+      page: 0,
+      size: 20,
+    };
+
+    setDraftFilters(nextFilters);
+    setFilters(nextFilters);
+  }
+
+  function handlePageChange(nextPage: number) {
+    setFilters((currentFilters) => ({
+      ...currentFilters,
+      page: Math.max(0, nextPage),
+    }));
+  }
 
   return (
     <section className="grid gap-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-xl font-semibold">최근 질문</h2>
-        <Badge variant="outline">{answers.length}</Badge>
+        <Badge variant="outline">{page?.totalElements ?? answers.length}</Badge>
       </div>
+
+      <form
+        onSubmit={handleSearch}
+        className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-[minmax(0,1fr)_180px_auto] sm:items-end"
+      >
+        <div className="grid gap-2">
+          <Label htmlFor="rag-history-keyword">Keyword</Label>
+          <Input
+            id="rag-history-keyword"
+            value={draftFilters.keyword ?? ""}
+            onChange={(event) =>
+              setDraftFilters((currentFilters) => ({
+                ...currentFilters,
+                keyword: event.target.value,
+              }))
+            }
+            placeholder="질문 또는 답변 검색"
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="rag-history-model">Model</Label>
+          <Input
+            id="rag-history-model"
+            value={draftFilters.model ?? ""}
+            onChange={(event) =>
+              setDraftFilters((currentFilters) => ({
+                ...currentFilters,
+                model: event.target.value,
+              }))
+            }
+            placeholder="llama3.2"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit">
+            <Search aria-hidden="true" />
+            검색
+          </Button>
+          <Button type="button" variant="outline" onClick={handleReset}>
+            <RotateCcw aria-hidden="true" />
+            초기화
+          </Button>
+        </div>
+      </form>
 
       {answersQuery.isError ? (
         <Alert variant="destructive">
@@ -102,7 +193,7 @@ export function RagAnswerHistory({
 
       {!answersQuery.isLoading && answers.length === 0 ? (
         <p className="rounded-lg border bg-card px-4 py-3 text-sm text-muted-foreground">
-          아직 저장된 RAG 답변이 없습니다.
+          조건에 맞는 RAG 답변이 없습니다.
         </p>
       ) : null}
 
@@ -156,6 +247,35 @@ export function RagAnswerHistory({
           </CardContent>
         </Card>
       ))}
+
+      {page ? (
+        <div className="flex flex-col gap-3 rounded-lg border bg-card px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-muted-foreground">
+            총 {page.totalElements.toLocaleString()}개 · {page.page + 1} /{" "}
+            {Math.max(page.totalPages, 1)} 페이지
+          </span>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(page.page - 1)}
+              disabled={!page.hasPrevious || answersQuery.isFetching}
+            >
+              <ChevronLeft aria-hidden="true" />
+              이전
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(page.page + 1)}
+              disabled={!page.hasNext || answersQuery.isFetching}
+            >
+              다음
+              <ChevronRight aria-hidden="true" />
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

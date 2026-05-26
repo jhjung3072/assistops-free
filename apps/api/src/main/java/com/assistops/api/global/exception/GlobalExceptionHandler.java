@@ -6,12 +6,14 @@ import com.assistops.api.rag.embedding.EmbeddingException;
 import com.assistops.api.rag.generation.RagGenerationException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.springframework.core.convert.ConversionFailedException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -45,6 +47,12 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<ErrorResponse> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException exception) {
 		return ResponseEntity.badRequest()
 			.body(ErrorResponse.of(HttpStatus.BAD_REQUEST, "File size must be 10MB or smaller."));
+	}
+
+	@ExceptionHandler({ MethodArgumentTypeMismatchException.class, ConversionFailedException.class })
+	public ResponseEntity<ErrorResponse> handleTypeMismatch(Exception exception) {
+		return ResponseEntity.badRequest()
+			.body(ErrorResponse.of(HttpStatus.BAD_REQUEST, "Request parameter format is invalid."));
 	}
 
 	@ExceptionHandler(InvalidCredentialsException.class)

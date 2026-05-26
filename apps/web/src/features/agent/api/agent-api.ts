@@ -1,5 +1,6 @@
 import { getAccessTokenCookie } from "@/lib/cookie";
 import { API_BASE_URL, ApiClientError, apiRequest } from "@/lib/api/client";
+import { buildQueryString } from "@/lib/api/query-string";
 import type { ApiResponse } from "@/types/api";
 import type {
   AgentChatMessageRequest,
@@ -15,6 +16,14 @@ import type {
   AgentChatSessionListResponse,
 } from "@/types/agent";
 
+export type AgentSessionListParams = {
+  keyword?: string;
+  createdFrom?: string;
+  createdTo?: string;
+  page?: number;
+  size?: number;
+};
+
 export function createAgentSession(
   request: AgentChatSessionCreateRequest = {},
 ) {
@@ -27,9 +36,9 @@ export function createAgentSession(
   );
 }
 
-export function getAgentSessions() {
+export function getAgentSessions(params: AgentSessionListParams = {}) {
   return apiRequest<ApiResponse<AgentChatSessionListResponse>>(
-    "/api/agent/sessions",
+    `/api/agent/sessions${buildQueryString(params)}`,
   );
 }
 

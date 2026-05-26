@@ -1,4 +1,5 @@
 import { apiRequest } from "@/lib/api/client";
+import { buildQueryString } from "@/lib/api/query-string";
 import type { ApiResponse } from "@/types/api";
 import type {
   RagAnswerDetail,
@@ -7,6 +8,15 @@ import type {
   RagAnswerResponse,
 } from "@/types/rag";
 
+export type RagAnswerListParams = {
+  keyword?: string;
+  model?: string;
+  createdFrom?: string;
+  createdTo?: string;
+  page?: number;
+  size?: number;
+};
+
 export function askRagQuestion(request: RagAnswerRequest) {
   return apiRequest<ApiResponse<RagAnswerResponse>>("/api/rag/answer", {
     method: "POST",
@@ -14,8 +24,10 @@ export function askRagQuestion(request: RagAnswerRequest) {
   });
 }
 
-export function getRagAnswers() {
-  return apiRequest<ApiResponse<RagAnswerListResponse>>("/api/rag/answers");
+export function getRagAnswers(params: RagAnswerListParams = {}) {
+  return apiRequest<ApiResponse<RagAnswerListResponse>>(
+    `/api/rag/answers${buildQueryString(params)}`,
+  );
 }
 
 export function getRagAnswer(id: string) {

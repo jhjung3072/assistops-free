@@ -39,7 +39,8 @@
 | Backend | BCrypt | 사용자 password hashing | 사용 중 |
 | Backend | RBAC | workspace membership 기반 권한 모델 | 기반 구성 |
 | Backend | Spring AI Ollama | 로컬 Ollama embedding/chat model 호출 | 사용 중 |
-| Backend | Querydsl | 타입 안전 동적 쿼리 | 예정 |
+| Backend | Querydsl | 문서, RAG 답변 이력, Agent Chat 세션 목록의 타입 안전 동적 쿼리 | 사용 중 |
+| Backend | Dynamic Filtering | keyword, status, model, 기간, pagination 기반 목록 조회 | 사용 중 |
 | Backend | Springdoc OpenAPI UI | API 문서화와 Swagger UI | 사용 중 |
 | Backend | Backend DB integration | Spring Boot와 PostgreSQL 연결 | 사용 중 |
 | Backend | MinIO Java SDK | S3-compatible object storage 업로드/다운로드/삭제 | 사용 중 |
@@ -59,6 +60,7 @@
 | AI | nomic-embed-text | 기본 local embedding model, 768 dimension | 사용 중 |
 | AI | llama3.2 | 기본 local chat model | 사용 중 |
 | AI | pgvector similarity search | chunk embedding cosine distance 검색 | 사용 중 |
+| AI | Native SQL for pgvector | pgvector operator와 vector update 처리 | 사용 중 |
 | AI | RAG answer generation | 검색 결과 기반 LLM 답변 생성 | 사용 중 |
 | AI | RAG pipeline | embedding, 검색 증강 생성 흐름 | 기본 구성 |
 | AI | Ollama generation options | `num_predict`, `temperature`, `top_p`, `keep_alive` 기반 로컬 응답 시간 튜닝 | 사용 중 |
