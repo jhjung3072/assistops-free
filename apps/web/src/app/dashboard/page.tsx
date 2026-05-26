@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BriefcaseBusiness, LogOut, UserRound } from "lucide-react";
+import { BriefcaseBusiness, FileText, LogOut, UserRound } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -9,7 +10,7 @@ import { AppHeader } from "@/components/layout/app-header";
 import { AppShell } from "@/components/layout/app-shell";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -102,6 +103,26 @@ export default function DashboardPage() {
               </AlertDescription>
             </Alert>
           ) : null}
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText aria-hidden="true" />
+                문서 관리
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                PDF, TXT, MD 원본 문서를 업로드하고 저장된 메타데이터를 확인합니다.
+              </p>
+              <Link
+                href="/documents"
+                className={buttonVariants({ variant: "outline" })}
+              >
+                문서 관리로 이동
+              </Link>
+            </CardContent>
+          </Card>
 
           <section className="grid gap-4 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
             <Card>

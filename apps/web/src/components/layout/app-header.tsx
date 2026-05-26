@@ -26,6 +26,10 @@ const navItems = [
     label: "Dashboard",
     href: "/dashboard",
   },
+  {
+    label: "Documents",
+    href: "/documents",
+  },
 ] as const;
 
 export function AppHeader() {

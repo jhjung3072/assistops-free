@@ -1,11 +1,13 @@
 package com.assistops.api.global.exception;
 
+import com.assistops.api.document.storage.DocumentStorageException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -28,6 +30,18 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<ErrorResponse> handleDuplicateEmail(DuplicateEmailException exception) {
 		return ResponseEntity.status(HttpStatus.CONFLICT)
 			.body(ErrorResponse.of(HttpStatus.CONFLICT, exception.getMessage()));
+	}
+
+	@ExceptionHandler(BadRequestException.class)
+	public ResponseEntity<ErrorResponse> handleBadRequest(BadRequestException exception) {
+		return ResponseEntity.badRequest()
+			.body(ErrorResponse.of(HttpStatus.BAD_REQUEST, exception.getMessage()));
+	}
+
+	@ExceptionHandler(MaxUploadSizeExceededException.class)
+	public ResponseEntity<ErrorResponse> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException exception) {
+		return ResponseEntity.badRequest()
+			.body(ErrorResponse.of(HttpStatus.BAD_REQUEST, "File size must be 10MB or smaller."));
 	}
 
 	@ExceptionHandler(InvalidCredentialsException.class)
@@ -58,5 +72,11 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException exception) {
 		return ResponseEntity.status(HttpStatus.CONFLICT)
 			.body(ErrorResponse.of(HttpStatus.CONFLICT, "Request conflicts with existing data."));
+	}
+
+	@ExceptionHandler(DocumentStorageException.class)
+	public ResponseEntity<ErrorResponse> handleDocumentStorage(DocumentStorageException exception) {
+		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+			.body(ErrorResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, exception.getMessage()));
 	}
 }

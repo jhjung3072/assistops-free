@@ -9,6 +9,11 @@ const API_BASE_URL =
 
 type ApiRequestOptions = RequestInit;
 
+export type ApiBlobResponse = {
+  blob: Blob;
+  filename?: string;
+};
+
 export class ApiClientError extends Error {
   status: number;
   response?: ApiErrorResponse;
@@ -69,6 +74,57 @@ export async function apiRequest<T>(
   return data as T;
 }
 
+export async function apiRequestBlob(
+  path: string,
+  options: ApiRequestOptions = {},
+): Promise<ApiBlobResponse> {
+  const { headers, body, ...requestOptions } = options;
+  const accessToken = getAccessTokenCookie();
+
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...requestOptions,
+      body,
+      headers: {
+        Accept: "*/*",
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        ...headers,
+      },
+    });
+  } catch {
+    throw new ApiClientError(
+      0,
+      "API 서버에 연결할 수 없습니다. 백엔드가 실행 중인지 확인해 주세요.",
+    );
+  }
+
+  if (!response.ok) {
+    const errorResponse = await parseJson(response) as
+      | ApiErrorResponse
+      | undefined;
+    const message =
+      errorResponse?.message ??
+      (response.status === 401
+        ? "인증이 필요합니다. 다시 로그인해 주세요."
+        : "파일을 다운로드하지 못했습니다.");
+
+    if (response.status === 401 && accessToken) {
+      deleteAccessTokenCookie();
+    }
+
+    throw new ApiClientError(response.status, message, errorResponse);
+  }
+
+  return {
+    blob: await response.blob(),
+    filename: getFilenameFromContentDisposition(
+      response.headers.get("Content-Disposition"),
+    ),
+  };
+}
+
 export function getApiErrorMessage(error: unknown, fallback: string) {
   if (error instanceof ApiClientError) {
     return error.message;
@@ -89,4 +145,24 @@ async function parseJson(response: Response) {
   } catch {
     return undefined;
   }
+}
+
+function getFilenameFromContentDisposition(contentDisposition: string | null) {
+  if (!contentDisposition) {
+    return undefined;
+  }
+
+  const encodedMatch = /filename\*=UTF-8''([^;]+)/i.exec(contentDisposition);
+
+  if (encodedMatch?.[1]) {
+    return decodeURIComponent(encodedMatch[1]);
+  }
+
+  const quotedMatch = /filename="([^"]+)"/i.exec(contentDisposition);
+
+  if (quotedMatch?.[1]) {
+    return quotedMatch[1];
+  }
+
+  return undefined;
 }

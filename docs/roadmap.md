@@ -62,7 +62,7 @@
 
 ## Phase 3.5: Frontend Auth Integration
 
-현재 진행 중인 단계입니다.
+기본 기반 구성을 마친 단계입니다.
 
 - 로그인 화면 구현
 - 회원가입 화면 구현
@@ -77,12 +77,18 @@
 
 ## Phase 4: Document Upload & Storage
 
-향후 구현 예정입니다.
+현재 진행 중인 단계입니다.
 
 - 문서 업로드 UI
 - MinIO 객체 저장
-- 문서 메타데이터 관리
+- PostgreSQL 문서 메타데이터 관리
+- 문서 목록 조회
+- 문서 상세 조회
+- 문서 다운로드
+- 문서 soft delete
 - 업로드 상태와 처리 이력 관리
+- 현재는 원본 파일 저장과 메타데이터 관리까지만 구현
+- 문서 텍스트 추출, chunking, embedding은 Phase 5에서 구현 예정
 
 ## Phase 5: RAG Pipeline with Ollama and pgvector
 
