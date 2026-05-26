@@ -31,6 +31,10 @@ const navItems = [
     href: "/rag",
   },
   {
+    label: "Agent",
+    href: "/agent",
+  },
+  {
     label: "Roadmap",
     href: "/roadmap",
   },

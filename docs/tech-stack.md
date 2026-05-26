@@ -53,6 +53,7 @@
 | Backend | RAG Answer API | semantic search 결과를 context로 답변 생성 | 사용 중 |
 | Backend | RAG latency metrics | query embedding, vector search, prompt build, chat generation, persist 단계별 측정 | 사용 중 |
 | Backend | Source Citation | 답변 출처 chunk 저장과 응답 표시 | 사용 중 |
+| Backend | Agent Chat API | session, message, source citation, latency metrics 저장 | 사용 중 |
 | AI | Ollama | 로컬 embedding/chat model 실행 | 사용 중 |
 | AI | qwen2.5-coder | 로컬 LLM 후보 모델 | 검토 |
 | AI | nomic-embed-text | 기본 local embedding model, 768 dimension | 사용 중 |
@@ -61,10 +62,12 @@
 | AI | RAG answer generation | 검색 결과 기반 LLM 답변 생성 | 사용 중 |
 | AI | RAG pipeline | embedding, 검색 증강 생성 흐름 | 기본 구성 |
 | AI | Ollama generation options | `num_predict`, `temperature`, `top_p`, `keep_alive` 기반 로컬 응답 시간 튜닝 | 사용 중 |
+| AI | Agent Chat UI | RAG Answer를 세션형 채팅 UX로 표시 | 사용 중 |
+| AI | Chat session persistence | Agent session과 message history 저장 | 사용 중 |
 | AI | Streaming response | 응답 생성 스트리밍 | 예정 |
-| AI | Agent Chat | multi-turn 문서 기반 대화 | 예정 |
+| AI | Multi-turn context memory | 이전 대화 맥락을 prompt에 반영하는 구조 | 예정 |
 | AI | prompt versioning | 프롬프트 변경 이력 관리와 UI | 예정 |
-| AI | tool calling style internal actions | 내부 업무 액션 실행 구조 | 예정 |
+| AI | Tool calling | 내부 업무 액션 실행 구조 | 예정 |
 | Database / Storage | PostgreSQL | 주요 업무 데이터 저장. Docker named volume 사용 | 로컬 인프라 구성 및 API 연결 |
 | Database / Storage | pgvector | `document_chunks.embedding vector(768)` 저장과 유사도 검색 | 사용 중 |
 | Database / Storage | Redis | 캐시와 세션 또는 작업 큐 보조 | 예정, 로컬 인프라 구성 |

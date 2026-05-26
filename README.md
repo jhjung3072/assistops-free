@@ -2,7 +2,7 @@
 
 `AssistOps Free`는 유료 AI API나 관리형 클라우드 서비스에 의존하지 않고, 로컬 LLM과 오픈소스 인프라만으로 동작하는 AI 업무 자동화 플랫폼을 목표로 하는 포트폴리오 프로젝트입니다.
 
-현재 단계는 **RAG Answer API & Q&A UI**입니다. Next.js 프론트엔드, Spring Boot API, Docker Compose 기반 로컬 인프라, PostgreSQL + pgvector 연결, Flyway/JPA 영속성 기반, JWT Bearer 인증 API, 프론트엔드 cookie token storage 기반 인증 화면, 문서 업로드/목록/다운로드/삭제/처리/embedding 화면, semantic chunk search 화면, RAG Q&A 화면이 구성되어 있습니다. MinIO는 원본 문서 저장소로 연결되어 있고, Ollama는 `nomic-embed-text` embedding과 `llama3.2` chat answer generation에 연결되어 있습니다. Redis는 아직 애플리케이션 코드와 연결하지 않았습니다.
+현재 단계는 **Agent Chat UI Foundation**입니다. Next.js 프론트엔드, Spring Boot API, Docker Compose 기반 로컬 인프라, PostgreSQL + pgvector 연결, Flyway/JPA 영속성 기반, JWT Bearer 인증 API, 프론트엔드 cookie token storage 기반 인증 화면, 문서 업로드/목록/다운로드/삭제/처리/embedding 화면, semantic chunk search 화면, RAG Q&A 화면, Agent Chat 세션 UI가 구성되어 있습니다. MinIO는 원본 문서 저장소로 연결되어 있고, Ollama는 `nomic-embed-text` embedding과 `llama3.2` chat answer generation에 연결되어 있습니다. Redis는 아직 애플리케이션 코드와 연결하지 않았습니다.
 
 ## 프로젝트 목표
 
@@ -34,6 +34,7 @@
 | AI                 | Ollama                                                                                                                                          | embedding/chat model 연동 사용 중 |
 | AI                 | `nomic-embed-text` local embedding model                                                                                                        | 사용 중   |
 | AI                 | `llama3.2` local chat model, RAG answer generation, source citation                                                                             | 사용 중   |
+| AI                 | Agent Chat session UI와 message persistence                                                                                                     | 사용 중   |
 | AI                 | prompt versioning, tool calling style internal actions                                                                                          | 예정      |
 | Database / Storage | PostgreSQL, pgvector                                                                                                                            | 문서/청크/embedding 저장과 vector search 사용 중 |
 | Database / Storage | MinIO                                                                                                                                           | 원본 문서 저장소로 사용 중 |
@@ -51,6 +52,7 @@
 - `apps/web`: 문서 처리 버튼과 chunk 목록 확인 UI 구성
 - `apps/web`: 문서 embedding 실행 버튼과 semantic chunk search 화면 구성
 - `apps/web`: RAG Q&A 화면, 답변 출처 표시, 답변 이력 조회/삭제 UI 구성
+- `apps/web`: Agent Chat 화면, 세션 목록, 메시지 목록, 출처와 latency 표시 UI 구성
 - `apps/web`: cookie에서 accessToken을 읽어 Authorization header를 붙이는 fetch API client, TanStack Query, Zustand auth store 연동
 - `apps/api`: Spring Boot API 초기 골격 및 `GET /api/health` 구현
 - `apps/api`: PostgreSQL datasource, Flyway migration, JPA 기반 `workspaces` 조회 API 구성
@@ -60,6 +62,7 @@
 - `apps/api`: Apache Tika 기반 문서 텍스트 추출, chunking, `document_chunks` 저장 구성
 - `apps/api`: Spring AI Ollama 기반 chunk embedding 생성, pgvector 저장, semantic chunk search API 구성
 - `apps/api`: Ollama chat model 기반 RAG answer API, 출처 저장, 답변 이력 조회/삭제 구성
+- `apps/api`: Agent Chat session/message/source 저장 API 구성. assistant 답변 생성은 기존 RAG Answer Service를 재사용
 - `docker-compose.yml`: PostgreSQL + pgvector, Redis, MinIO, Ollama 로컬 인프라 실행 구성
 - `infra/postgres/init`: PostgreSQL 시작 시 pgvector extension 활성화 SQL 추가
 - 루트 `pnpm-workspace.yaml`: `apps/web` workspace 등록
@@ -77,7 +80,8 @@
 - 세부 RBAC policy
 - Spring Boot와 Redis 연결
 - streaming response
-- multi-turn Agent Chat
+- multi-turn context memory
+- tool calling
 - Workflow Builder
 - OpenTelemetry, Prometheus, Grafana, Loki 관측성
 
@@ -126,6 +130,7 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
 | `/documents` | 인증된 사용자 문서 업로드와 문서 목록 |
 | `/search` | embedding된 chunk semantic search |
 | `/rag` | 문서 기반 RAG Q&A와 답변 이력 |
+| `/agent` | 세션형 Agent Chat UI |
 
 Health API 확인:
 
@@ -182,6 +187,19 @@ curl -X POST http://localhost:8080/api/rag/answer \
 
 curl http://localhost:8080/api/rag/answers \
   -H 'Authorization: Bearer <accessToken>'
+
+curl -X POST http://localhost:8080/api/agent/sessions \
+  -H 'Authorization: Bearer <accessToken>' \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"새 채팅"}'
+
+curl http://localhost:8080/api/agent/sessions \
+  -H 'Authorization: Bearer <accessToken>'
+
+curl -X POST http://localhost:8080/api/agent/sessions/<sessionId>/messages \
+  -H 'Authorization: Bearer <accessToken>' \
+  -H 'Content-Type: application/json' \
+  -d '{"content":"문서 기반으로 답변해줘","topK":3}'
 ```
 
 주요 Auth endpoint:
@@ -198,7 +216,7 @@ curl http://localhost:8080/api/rag/answers \
 pnpm test:api
 ```
 
-현재 백엔드는 PostgreSQL 연결, `workspaces` 조회 API, JWT 기반 인증 API, 문서 업로드/처리/embedding/search/RAG answer API까지 구성되어 있습니다. `/api/workspaces`는 인증된 사용자만 접근할 수 있지만, 사용자별 workspace filtering은 다음 단계에서 구현할 예정입니다. refresh token, 세부 RBAC policy, Redis queue, streaming response, multi-turn Agent Chat은 아직 구현하지 않았습니다.
+현재 백엔드는 PostgreSQL 연결, `workspaces` 조회 API, JWT 기반 인증 API, 문서 업로드/처리/embedding/search/RAG answer API, Agent Chat API까지 구성되어 있습니다. `/api/workspaces`는 인증된 사용자만 접근할 수 있지만, 사용자별 workspace filtering은 다음 단계에서 구현할 예정입니다. refresh token, 세부 RBAC policy, Redis queue, streaming response, multi-turn context memory는 아직 구현하지 않았습니다.
 
 현재 인증은 백엔드가 JWT accessToken을 JSON 응답 body로 내려주고, 프론트엔드가 해당 토큰을 `assistops_access_token` browser cookie에 저장하는 방식입니다. 프론트엔드는 accessToken을 `localStorage`나 `sessionStorage`에 저장하지 않습니다. API 요청 시 cookie에서 token을 읽어 `Authorization: Bearer <token>` header를 추가하고, 로그인 상태 복원은 `GET /api/auth/me` 응답으로 판단합니다.
 
@@ -257,6 +275,8 @@ docker exec -it assistops-ollama ollama pull llama3.2:1b
 OLLAMA_CHAT_MODEL=llama3.2:1b pnpm dev:api
 ```
 
+`/rag`는 질문 하나에 대한 단발성 Q&A와 답변 이력 관리 화면입니다. `/agent`는 같은 RAG Answer 기능을 세션형 채팅 UI로 저장하고 다시 확인하는 화면입니다. 현재 `/agent`는 메시지를 저장하지만 이전 메시지를 LLM context로 다시 넣는 multi-turn memory는 아직 구현하지 않았습니다.
+
 현재 단계에서는 streaming response, multi-turn conversation, Agent Chat 장기 메모리, tool calling, Workflow Builder, Redis queue 기반 비동기 처리는 아직 구현하지 않았습니다.
 
 주요 Document endpoint:
@@ -276,6 +296,11 @@ OLLAMA_CHAT_MODEL=llama3.2:1b pnpm dev:api
 | `GET` | `/api/rag/answers` | RAG 답변 이력 조회 |
 | `GET` | `/api/rag/answers/{id}` | RAG 답변 상세와 출처 조회 |
 | `DELETE` | `/api/rag/answers/{id}` | RAG 답변 삭제 |
+| `POST` | `/api/agent/sessions` | Agent Chat session 생성 |
+| `GET` | `/api/agent/sessions` | 현재 사용자의 Agent Chat session 목록 조회 |
+| `GET` | `/api/agent/sessions/{id}` | Agent Chat session 상세, 메시지, 출처 조회 |
+| `POST` | `/api/agent/sessions/{id}/messages` | 사용자 메시지 저장 후 RAG Answer Service로 assistant 답변 생성 |
+| `DELETE` | `/api/agent/sessions/{id}` | Agent Chat session과 메시지 삭제 |
 
 ## 로컬 인프라 실행 방법
 
@@ -362,9 +387,9 @@ DB_PORT=25432 pnpm dev:api
 - 세부 RBAC policy
 - Redis queue 기반 비동기 embedding/answer 처리
 - streaming response
-- multi-turn Agent Chat
+- multi-turn context memory
+- Agent tool calling
 - RAG prompt evaluation과 답변 품질 개선
-- Agent Chat UI
 - React Flow 기반 Workflow Builder
 - AI Release Copilot
 - GitHub Actions CI 고도화

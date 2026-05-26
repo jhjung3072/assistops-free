@@ -2,6 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  Bot,
   BriefcaseBusiness,
   FileSearch,
   FileText,
@@ -167,6 +168,26 @@ export default function DashboardPage() {
                 className={buttonVariants({ variant: "outline" })}
               >
                 문서 기반 AI 질문하기
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bot aria-hidden="true" />
+                AI Agent Chat
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                단발성 RAG 답변을 세션형 채팅 UI로 저장하고 다시 확인합니다.
+              </p>
+              <Link
+                href="/agent"
+                className={buttonVariants({ variant: "outline" })}
+              >
+                AI Agent Chat 시작하기
               </Link>
             </CardContent>
           </Card>

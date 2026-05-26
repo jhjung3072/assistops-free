@@ -120,7 +120,7 @@
 
 ## Phase 6: RAG Answer API & Q&A UI
 
-현재 진행 중인 단계입니다.
+기본 기반 구성을 마친 단계입니다.
 
 - semantic search 결과를 context로 사용하는 답변 생성 API `POST /api/rag/answer` 구현
 - Ollama `llama3.2` chat model integration
@@ -135,13 +135,17 @@
 
 ## Phase 7: Agent Chat UI
 
-향후 구현 예정입니다.
+현재 진행 중인 단계입니다.
 
-- 업무 질의용 채팅 화면
-- RAG 출처 표시
-- internal action 실행 결과 표시
-- 대화 이력 관리
-- streaming response 또는 multi-turn context는 이 단계에서 검토
+- Agent Chat session 생성/목록/상세/삭제 API 구성
+- USER/ASSISTANT message 저장
+- 기존 RAG Answer Service를 재사용한 assistant 답변 생성
+- assistant 답변의 source citation과 latency metrics 저장
+- `/agent` 채팅 화면, 이전 세션 목록, 메시지 타임라인 구성
+- `/rag`는 단발성 Q&A, `/agent`는 세션형 채팅 UI로 역할 분리
+- 현재는 single-turn RAG 답변을 세션에 저장하는 구조
+- streaming response, multi-turn context memory, tool calling은 후속 개선 후보
+- 다음 단계 후보는 streaming response 또는 prompt versioning
 
 ## Phase 8: Workflow Builder
 
