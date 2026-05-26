@@ -4,11 +4,11 @@
 
 ## Phase 0: Monorepo & Frontend Foundation
 
-현재 진행 중인 단계입니다.
+기본 기반 구성을 마친 단계입니다.
 
 - 루트 workspace 구성
 - `apps/web` Next.js App Router 프로젝트 정리
-- Frontend App Foundation 진행 중
+- Frontend App Foundation 구성
 - README와 docs 기반 문서화
 - 기본 랜딩 화면 구성
 - 프론트엔드 주요 라이브러리 설치
@@ -16,12 +16,14 @@
 
 ## Phase 1: Spring Boot API Foundation
 
-향후 구현 예정입니다.
+현재 진행 중인 단계입니다.
 
 - `apps/api` Spring Boot 프로젝트 생성
 - Java 21 기반 개발 환경 구성
-- API 공통 응답, 예외 처리, validation 구조 정리
-- Springdoc OpenAPI 문서화 기반 추가
+- `GET /api/health` health API 구현
+- Spring Boot 테스트 기반 구성
+- API 공통 응답, 예외 처리, validation 구조 정리 예정
+- Springdoc OpenAPI 세부 문서화 정리 예정
 
 ## Phase 2: Local Infrastructure with Docker Compose
 

@@ -22,13 +22,17 @@
 | Frontend | class-variance-authority | UI variant 스타일 구성 | 예정 |
 | Frontend | clsx | 조건부 className 조합 | 사용 중 |
 | Frontend | tailwind-merge | Tailwind className 병합 | 사용 중 |
-| Backend | Java 21 | 백엔드 런타임 | 예정 |
-| Backend | Spring Boot | 백엔드 API 애플리케이션 | 예정 |
+| Backend | Java 21 | 백엔드 런타임 | 사용 중 |
+| Backend | Spring Boot | 백엔드 API 애플리케이션 | 사용 중 |
+| Backend | Spring Web | REST API 구현 | 사용 중 |
+| Backend | Spring Boot Actuator | health와 운영 endpoint 기반 | 사용 중 |
+| Backend | Validation | 요청 값 검증 기반 | 사용 중 |
+| Backend | Lombok | Java boilerplate 감소 | 사용 중 |
 | Backend | Spring Security | 인증과 인가 | 예정 |
 | Backend | Spring AI | AI 연동 추상화 검토 | 예정 |
 | Backend | Spring Data JPA | 관계형 데이터 접근 | 예정 |
 | Backend | Querydsl | 타입 안전 동적 쿼리 | 예정 |
-| Backend | Springdoc OpenAPI | API 문서화 | 예정 |
+| Backend | Springdoc OpenAPI UI | API 문서화와 Swagger UI | 사용 중 |
 | AI | Ollama | 로컬 LLM 실행 | 예정 |
 | AI | qwen2.5-coder 또는 llama3.2 | 로컬 LLM 후보 모델 | 검토 |
 | AI | local embedding model | 문서 임베딩 생성 | 예정 |

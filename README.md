@@ -2,7 +2,7 @@
 
 `AssistOps Free`는 유료 AI API나 관리형 클라우드 서비스에 의존하지 않고, 로컬 LLM과 오픈소스 인프라만으로 동작하는 AI 업무 자동화 플랫폼을 목표로 하는 포트폴리오 프로젝트입니다.
 
-현재 단계는 **repo 기반 정리와 Next.js 프론트엔드 초기 세팅**입니다. Spring Boot 백엔드, 로컬 AI, 데이터베이스, 인프라, 관측성 구성은 아직 구현하지 않았으며 향후 단계에서 추가할 예정입니다.
+현재 단계는 **Spring Boot API Foundation**입니다. Next.js 프론트엔드 기반과 Spring Boot API 초기 골격은 구성되어 있으며, 로컬 AI, 데이터베이스, 인프라, 관측성 구성은 아직 구현하지 않았고 향후 단계에서 추가할 예정입니다.
 
 ## 프로젝트 목표
 
@@ -23,7 +23,8 @@
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | Frontend           | Next.js App Router, React, TypeScript, Tailwind CSS, shadcn/ui                                                                                  | 사용 중   |
 | Frontend           | Radix UI, TanStack Query, Zustand, React Hook Form, Zod, React Flow, Recharts, Playwright                                                       | 예정      |
-| Backend            | Java 21, Spring Boot, Spring Security, Spring AI, Spring Data JPA, Querydsl, Springdoc OpenAPI                                                  | 예정      |
+| Backend            | Java 21, Spring Boot, Spring Web, Spring Boot Actuator, Validation, Lombok, Springdoc OpenAPI UI                                                | 사용 중   |
+| Backend            | Spring Security, Spring AI, Spring Data JPA, Querydsl                                                                                           | 예정      |
 | AI                 | Ollama, qwen2.5-coder 또는 llama3.2 계열 로컬 모델, local embedding model, RAG pipeline, prompt versioning, tool calling style internal actions | 예정      |
 | Database / Storage | PostgreSQL, pgvector, Redis, MinIO                                                                                                              | 예정      |
 | Infra              | Docker Engine, Docker Compose, Nginx, GitHub Actions, Oracle Cloud Always Free 또는 local server                                                | 예정      |
@@ -33,6 +34,7 @@
 
 - `apps/web`: Next.js App Router 기반 프론트엔드 프로젝트 생성 완료
 - `apps/web`: shadcn/ui 초기화 및 기본 UI 컴포넌트 일부 적용
+- `apps/api`: Spring Boot API 초기 골격 및 `GET /api/health` 구현
 - 루트 `pnpm-workspace.yaml`: `apps/web` workspace 등록
 - 루트 `package.json`: 프론트엔드 실행, 빌드, 린트 스크립트 추가
 - GitHub Actions: 프론트엔드 lint/build 자동 검증 workflow 구성
@@ -41,11 +43,12 @@
 
 아직 구현하지 않은 영역:
 
-- `apps/api` Spring Boot 백엔드
+- 실제 인증 및 권한 처리
+- 데이터 영속성 계층
 - Docker Compose 로컬 인프라
 - Ollama 연동
 - PostgreSQL, pgvector, Redis, MinIO 설정
-- 인증, 권한, RAG, Agent UI, Workflow Builder
+- RAG, Agent UI, Workflow Builder
 - OpenTelemetry, Prometheus, Grafana, Loki 관측성
 
 ## 로컬 실행 방법
@@ -64,11 +67,31 @@ pnpm lint:web
 pnpm build:web
 ```
 
-현재는 프론트엔드만 실행됩니다. 백엔드, 데이터베이스, 로컬 AI, Docker Compose 기반 실행은 향후 구현 예정입니다.
+백엔드 API는 Gradle Wrapper로 실행합니다.
+
+```bash
+cd apps/api
+./gradlew bootRun
+```
+
+Health API 확인:
+
+```bash
+curl http://localhost:8080/api/health
+```
+
+백엔드 테스트:
+
+```bash
+cd apps/api
+./gradlew test
+```
+
+현재 백엔드는 health API와 기본 실행 구조만 있습니다. 인증, 데이터베이스, 로컬 AI, Docker Compose 기반 실행은 향후 구현 예정입니다.
 
 ## 향후 구현 예정 기능
 
-- Spring Boot API 프로젝트 생성 및 기본 구조 정리
+- Spring Boot API 기능 확장
 - 인증 및 RBAC 기반 사용자 권한 모델
 - 문서 업로드 및 MinIO 저장
 - PostgreSQL + pgvector 기반 임베딩 저장소

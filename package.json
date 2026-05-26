@@ -6,6 +6,9 @@
   "scripts": {
     "dev:web": "pnpm --dir apps/web dev",
     "build:web": "pnpm --dir apps/web build",
-    "lint:web": "pnpm --dir apps/web lint"
+    "lint:web": "pnpm --dir apps/web lint",
+    "dev:api": "cd apps/api && ./gradlew bootRun",
+    "test:api": "cd apps/api && ./gradlew test",
+    "build:api": "cd apps/api && ./gradlew build"
   }
 }
