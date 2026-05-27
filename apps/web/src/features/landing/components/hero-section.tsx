@@ -10,7 +10,7 @@ export function HeroSection() {
     <section className="max-w-3xl">
       <Badge variant="outline" className="mb-5">
         <Network aria-hidden="true" />
-        Local-first AI operations
+        Local-first knowledge hub
       </Badge>
       <h1 className="text-4xl leading-tight font-semibold sm:text-5xl">
         {PROJECT_NAME}

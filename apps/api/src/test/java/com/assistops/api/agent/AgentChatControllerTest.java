@@ -218,22 +218,22 @@ class AgentChatControllerTest extends AbstractPostgresContainerTest {
 	void sendMessageStoresUserAndAssistantMessages() throws Exception {
 		RegisteredUser user = register();
 		String sessionId = createSession(user.accessToken(), null);
-		RagAnswerResponse answer = createRagAnswerResponse(user, "AssistOps Free는 로컬 RAG 플랫폼입니다.");
+		RagAnswerResponse answer = createRagAnswerResponse(user, "AI Knowledge Hub는 로컬 RAG 플랫폼입니다.");
 		given(ragAnswerService.answer(any(), any(RagAnswerRequest.class), any(PromptType.class))).willReturn(answer);
 
 		mockMvc.perform(post("/api/agent/sessions/{id}/messages", sessionId)
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + user.accessToken())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(Map.of(
-					"content", "AssistOps Free는 무엇인가요?",
+					"content", "AI Knowledge Hub는 무엇인가요?",
 					"topK", 3
 				))))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.title").value("AssistOps Free는 무엇인가요?"))
+			.andExpect(jsonPath("$.title").value("AI Knowledge Hub는 무엇인가요?"))
 			.andExpect(jsonPath("$.messages[0].role").value("USER"))
-			.andExpect(jsonPath("$.messages[0].content").value("AssistOps Free는 무엇인가요?"))
+			.andExpect(jsonPath("$.messages[0].content").value("AI Knowledge Hub는 무엇인가요?"))
 			.andExpect(jsonPath("$.messages[1].role").value("ASSISTANT"))
-			.andExpect(jsonPath("$.messages[1].content").value("AssistOps Free는 로컬 RAG 플랫폼입니다."))
+			.andExpect(jsonPath("$.messages[1].content").value("AI Knowledge Hub는 로컬 RAG 플랫폼입니다."))
 			.andExpect(jsonPath("$.messages[1].ragAnswerId").value(answer.answerId().toString()))
 			.andExpect(jsonPath("$.messages[1].promptVersionId").value(answer.promptVersionId().toString()))
 			.andExpect(jsonPath("$.messages[1].promptTemplateName").value("Agent Test Prompt"))
@@ -259,7 +259,7 @@ class AgentChatControllerTest extends AbstractPostgresContainerTest {
 		mockMvc.perform(post("/api/agent/sessions/{id}/messages/stream", UUID.randomUUID())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(Map.of(
-					"content", "AssistOps Free는 무엇인가요?",
+					"content", "AI Knowledge Hub는 무엇인가요?",
 					"topK", 3
 				))))
 			.andExpect(status().isUnauthorized());
@@ -269,7 +269,7 @@ class AgentChatControllerTest extends AbstractPostgresContainerTest {
 	void streamMessageStoresMessagesSourcesAndLatency() throws Exception {
 		RegisteredUser user = register();
 		String sessionId = createSession(user.accessToken(), null);
-		RagAnswerResponse answer = createRagAnswerResponse(user, "AssistOps Free는 로컬 RAG 플랫폼입니다.");
+		RagAnswerResponse answer = createRagAnswerResponse(user, "AI Knowledge Hub는 로컬 RAG 플랫폼입니다.");
 		given(ragAnswerService.streamAnswer(
 			any(),
 			any(RagAnswerRequest.class),
@@ -290,8 +290,8 @@ class AgentChatControllerTest extends AbstractPostgresContainerTest {
 					0.08,
 					"nomic-embed-text"
 				));
-				handler.onToken("AssistOps ");
-				handler.onToken("Free");
+				handler.onToken("AI Knowledge ");
+				handler.onToken("Hub");
 				return answer;
 			});
 
@@ -300,7 +300,7 @@ class AgentChatControllerTest extends AbstractPostgresContainerTest {
 				.accept(MediaType.TEXT_EVENT_STREAM)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(Map.of(
-					"content", "AssistOps Free는 무엇인가요?",
+					"content", "AI Knowledge Hub는 무엇인가요?",
 					"topK", 3
 				))))
 			.andExpect(request().asyncStarted())
@@ -313,7 +313,7 @@ class AgentChatControllerTest extends AbstractPostgresContainerTest {
 			.andExpect(content().string(containsString("event:metadata")))
 			.andExpect(content().string(containsString("event:source")))
 			.andExpect(content().string(containsString("event:token")))
-			.andExpect(content().string(containsString("AssistOps ")))
+			.andExpect(content().string(containsString("AI Knowledge ")))
 			.andExpect(content().string(containsString("event:latency")))
 			.andExpect(content().string(containsString("event:done")))
 			.andReturn();
@@ -323,7 +323,7 @@ class AgentChatControllerTest extends AbstractPostgresContainerTest {
 		assertThat(messages).hasSize(2);
 		assertThat(messages.get(0).getRole()).isEqualTo(AgentChatRole.USER);
 		assertThat(messages.get(1).getRole()).isEqualTo(AgentChatRole.ASSISTANT);
-		assertThat(messages.get(1).getContent()).isEqualTo("AssistOps Free는 로컬 RAG 플랫폼입니다.");
+		assertThat(messages.get(1).getContent()).isEqualTo("AI Knowledge Hub는 로컬 RAG 플랫폼입니다.");
 		assertThat(messages.get(1).getTotalMs()).isEqualTo(4200);
 		assertThat(messages.get(1).getChatGenerationMs()).isEqualTo(3900);
 		assertThat(messageSourceRepository.findByMessageIdOrderByCreatedAtAsc(messages.get(1).getId())).hasSize(1);
@@ -433,13 +433,13 @@ class AgentChatControllerTest extends AbstractPostgresContainerTest {
 			document.getId(),
 			workspaceId,
 			0,
-			"AssistOps Free는 로컬 LLM과 오픈소스 인프라로 동작합니다.",
+			"AI Knowledge Hub는 로컬 LLM과 오픈소스 인프라로 동작합니다.",
 			16
 		));
 		RagAnswer ragAnswer = ragAnswerRepository.save(new RagAnswer(
 			workspaceId,
 			user.userId(),
-			"AssistOps Free는 무엇인가요?",
+			"AI Knowledge Hub는 무엇인가요?",
 			answerText,
 			"llama3.2",
 			3,

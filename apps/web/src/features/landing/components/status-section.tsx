@@ -3,6 +3,7 @@ import {
   ChartNoAxesCombined,
   CheckCircle2,
   Database,
+  FileSliders,
   Server,
   type LucideIcon,
 } from "lucide-react";
@@ -23,6 +24,7 @@ const statusIcons: Record<StatusCard["id"], LucideIcon> = {
   "local-ai": Bot,
   database: Database,
   monitoring: ChartNoAxesCombined,
+  prompts: FileSliders,
 };
 
 function getBadgeVariant(status: StatusCard["status"]) {
@@ -33,9 +35,9 @@ export function StatusSection() {
   return (
     <section aria-labelledby="status-heading">
       <h2 id="status-heading" className="mb-4 text-xl font-semibold">
-        Current Status
+        핵심 기능
       </h2>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {statusCards.map((item) => {
           const Icon = statusIcons[item.id];
 

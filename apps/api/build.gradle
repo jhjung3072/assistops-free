@@ -6,7 +6,7 @@ plugins {
 
 group = 'com.assistops'
 version = '0.0.1-SNAPSHOT'
-description = 'AssistOps Free API'
+description = 'AI Knowledge Hub API'
 
 ext {
 	springAiVersion = '1.1.7'

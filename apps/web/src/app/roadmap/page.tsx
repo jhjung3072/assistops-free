@@ -16,12 +16,12 @@ export default function RoadmapPage() {
       <AppShell>
         <section className="max-w-3xl">
           <Badge variant="outline" className="mb-5">
-            Current Phase: Frontend Auth Integration
+            Current Phase: Rebranding
           </Badge>
           <h1 className="text-3xl font-semibold sm:text-4xl">개발 로드맵</h1>
           <p className="mt-4 text-muted-foreground">
-            현재 단계는 백엔드 JWT 인증 API를 프론트엔드 화면과 연결하는
-            단계입니다. refresh token과 세부 RBAC UI는 후속 단계에서 다룹니다.
+            현재는 기존 자동화 중심 방향을 지식 관리 플랫폼인 AI Knowledge Hub로
+            정리하는 단계입니다. Notes, Links, Collections는 후속 단계에서 다룹니다.
           </p>
         </section>
 
@@ -31,15 +31,15 @@ export default function RoadmapPage() {
               <CardHeader>
                 <CardTitle className="flex flex-wrap items-center gap-2">
                   {phase}
-                  {index === 4 ? <Badge>현재 단계</Badge> : null}
+                  {index === 0 ? <Badge>현재 단계</Badge> : null}
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground">
-                {index < 4
-                  ? "기본 기반을 구성한 단계입니다."
-                  : index === 4
-                    ? "로그인, 회원가입, 인증 보호 dashboard를 연결하는 단계입니다."
-                  : "향후 구현 예정 단계입니다."}
+                {index === 0
+                  ? "제품명, 문서, 화면 문구를 AI Knowledge Hub 방향으로 정리합니다."
+                  : index === 1
+                    ? "현재 구현된 문서 업로드, 검색, RAG, Agent, Prompt 기반을 Knowledge Library로 다듬는 단계입니다."
+                    : "향후 구현 예정 단계입니다."}
               </CardContent>
             </Card>
           ))}

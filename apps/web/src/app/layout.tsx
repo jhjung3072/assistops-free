@@ -14,8 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AssistOps Free",
-  description: "로컬 LLM과 오픈소스 인프라 기반 AI 업무 자동화 플랫폼",
+  title: "AI Knowledge Hub",
+  description:
+    "문서, 메모, 링크, 대화를 한곳에 모으고 로컬 LLM과 RAG로 검색, 요약, 질의응답을 제공하는 지식 관리 플랫폼",
 };
 
 export default function RootLayout({

@@ -92,7 +92,7 @@ class RagAnswerControllerTest extends AbstractPostgresContainerTest {
 		given(ragGenerationService.modelName()).willReturn("llama3.2");
 		given(ragGenerationService.generateAnswer(any(), any(), any(PromptVersion.class)))
 			.willReturn(new RagGenerationResult(
-				"문서에 따르면 AssistOps Free는 로컬 인프라 기반 자동화 플랫폼입니다.",
+				"문서에 따르면 AI Knowledge Hub는 로컬 인프라 기반 지식 관리 플랫폼입니다.",
 				4,
 				123,
 				120
@@ -104,7 +104,7 @@ class RagAnswerControllerTest extends AbstractPostgresContainerTest {
 		mockMvc.perform(post("/api/rag/answer")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(Map.of(
-					"question", "AssistOps Free는 무엇인가요?",
+					"question", "AI Knowledge Hub는 무엇인가요?",
 					"topK", 5
 				))))
 			.andExpect(status().isUnauthorized());
@@ -117,7 +117,7 @@ class RagAnswerControllerTest extends AbstractPostgresContainerTest {
 		ChunkSearchResult source = createSourceResult(registeredUser);
 		given(chunkSearchService.searchWithMetrics(any(), any(ChunkSearchRequest.class)))
 			.willReturn(new ChunkSearchService.ChunkSearchResultWithMetrics(
-				new ChunkSearchResponse("AssistOps Free는 무엇인가요?", 5, List.of(source)),
+				new ChunkSearchResponse("AI Knowledge Hub는 무엇인가요?", 5, List.of(source)),
 				11,
 				22
 			));
@@ -126,14 +126,14 @@ class RagAnswerControllerTest extends AbstractPostgresContainerTest {
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + registeredUser.accessToken())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(Map.of(
-					"question", "AssistOps Free는 무엇인가요?",
+					"question", "AI Knowledge Hub는 무엇인가요?",
 					"topK", 5
 				))))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(jsonPath("$.answerId").exists())
-			.andExpect(jsonPath("$.question").value("AssistOps Free는 무엇인가요?"))
-			.andExpect(jsonPath("$.answer").value("문서에 따르면 AssistOps Free는 로컬 인프라 기반 자동화 플랫폼입니다."))
+			.andExpect(jsonPath("$.question").value("AI Knowledge Hub는 무엇인가요?"))
+			.andExpect(jsonPath("$.answer").value("문서에 따르면 AI Knowledge Hub는 로컬 인프라 기반 지식 관리 플랫폼입니다."))
 			.andExpect(jsonPath("$.model").value("llama3.2"))
 			.andExpect(jsonPath("$.promptVersionId").value(activePromptVersionId))
 			.andExpect(jsonPath("$.promptTemplateName").value("RAG Active Prompt"))
@@ -146,7 +146,7 @@ class RagAnswerControllerTest extends AbstractPostgresContainerTest {
 			.andExpect(jsonPath("$.latencyMetrics.answerPersistMs").exists())
 			.andExpect(jsonPath("$.latencyMetrics.sourceCount").value(1))
 			.andExpect(jsonPath("$.latencyMetrics.promptContextCharCount").value(120))
-			.andExpect(jsonPath("$.latencyMetrics.answerCharCount").value(45))
+			.andExpect(jsonPath("$.latencyMetrics.answerCharCount").value(49))
 			.andExpect(jsonPath("$.sources[0].documentName").value("rag-notes.txt"))
 			.andExpect(jsonPath("$.sources[0].chunkIndex").value(0))
 			.andExpect(jsonPath("$.sources[0].score").value(0.91))
@@ -163,7 +163,7 @@ class RagAnswerControllerTest extends AbstractPostgresContainerTest {
 		assertThat(savedAnswer.getAnswerPersistMs()).isNotNull();
 		assertThat(savedAnswer.getSourceCount()).isEqualTo(1);
 		assertThat(savedAnswer.getPromptContextCharCount()).isEqualTo(120);
-		assertThat(savedAnswer.getAnswerCharCount()).isEqualTo(45);
+		assertThat(savedAnswer.getAnswerCharCount()).isEqualTo(49);
 		assertThat(savedAnswer.getPromptVersionId()).isEqualTo(UUID.fromString(activePromptVersionId));
 		assertThat(ragAnswerSourceRepository.countByRagAnswerId(answerId)).isEqualTo(1);
 
@@ -445,7 +445,7 @@ class RagAnswerControllerTest extends AbstractPostgresContainerTest {
 			document.getId(),
 			workspaceId,
 			0,
-			"AssistOps Free는 로컬 인프라 기반 AI 자동화 플랫폼입니다.",
+			"AI Knowledge Hub는 로컬 인프라 기반 AI 지식 관리 플랫폼입니다.",
 			14
 		));
 

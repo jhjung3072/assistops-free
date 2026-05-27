@@ -20,8 +20,9 @@ export default function ArchitecturePage() {
           </Badge>
           <h1 className="text-3xl font-semibold sm:text-4xl">목표 아키텍처</h1>
           <p className="mt-4 text-muted-foreground">
-            현재는 Next.js 프론트엔드, Spring Boot API, JWT 인증, dashboard
-            초기 화면, workspace 조회 흐름까지 연결되어 있습니다.
+            현재는 Next.js 프론트엔드, Spring Boot API, JWT 인증, 문서 저장,
+            semantic search, RAG Q&A, Agent Chat, Prompt Versioning 흐름이
+            연결되어 있습니다.
           </p>
         </section>
 

@@ -1,6 +1,6 @@
-# AssistOps Free 테스트 문서
+# AI Knowledge Hub 테스트 문서
 
-AssistOps Free는 로컬 LLM과 오픈소스 인프라 기반의 AI 업무 자동화 플랫폼입니다.
+AI Knowledge Hub는 로컬 LLM과 오픈소스 인프라 기반의 AI 지식 관리 플랫폼입니다.
 
 이 프로젝트는 Next.js, Spring Boot, PostgreSQL, pgvector, MinIO, Ollama를 사용합니다.
 

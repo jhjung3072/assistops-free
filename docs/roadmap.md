@@ -1,216 +1,88 @@
 # Roadmap
 
-`AssistOps Free`는 한 번에 전체 기능을 구현하지 않고, 포트폴리오로 설명 가능한 단위별로 개발합니다. 각 Phase는 현재 상태와 목표를 분리해 기록합니다.
+`AI Knowledge Hub`는 팀 내부 지식을 한곳에 모으고, 로컬 LLM과 RAG로 검색·요약·질의응답을 제공하는 지식 관리 플랫폼을 목표로 합니다.
 
-## Phase 0: Monorepo & Frontend Foundation
+## Phase 0: Rebranding to AI Knowledge Hub
 
-기본 기반 구성을 마친 단계입니다.
+진행 중입니다.
 
-- 루트 workspace 구성
-- `apps/web` Next.js App Router 프로젝트 정리
-- Frontend App Foundation 구성
-- README와 docs 기반 문서화
-- 기본 랜딩 화면 구성
-- 프론트엔드 주요 라이브러리 설치
-- GitHub Actions Web CI 구성
+- 제품명과 문서 방향을 AI Knowledge Hub로 정리
+- 자동화 중심 문구와 화면 제거
+- Documents, Search, RAG, Agent, Prompts 기능 유지
+- 기존 자동화 관련 애플리케이션 코드 제거
 
-## Phase 1: Spring Boot API Foundation
+## Phase 1: Knowledge Library Foundation
 
-기본 기반 구성을 마친 단계입니다.
+현재 구현된 문서 기반 기능을 Knowledge Library 중심으로 정리합니다.
 
-- `apps/api` Spring Boot 프로젝트 생성
-- Java 21 기반 개발 환경 구성
-- `GET /api/health` health API 구현
-- Spring Boot 테스트 기반 구성
-- validation과 최소 전역 예외 처리 구성
-- Springdoc OpenAPI 세부 문서화 정리 예정
+- 문서 업로드와 원본 저장
+- 문서 목록과 상태 관리
+- 문서 처리, chunking, embedding
+- semantic search
+- RAG Q&A
+- Agent Chat
+- Prompt Versioning
 
-## Phase 2: Local Infrastructure with Docker Compose
+## Phase 2: Notes & Links
 
-기본 기반 구성을 마친 단계입니다.
+예정입니다.
 
-- Docker Compose 기반 PostgreSQL, Redis, MinIO, Ollama 실행
-- 로컬 개발용 환경 변수 정리
-- PostgreSQL pgvector extension 초기화 스크립트 구성
-- Spring Boot DB 연결은 Backend Persistence Foundation에서 진행
-- RAG pipeline과 Spring AI 연동은 후속 Phase에서 구현 예정
+- 짧은 메모 저장
+- 외부 링크 저장
+- 메모/링크를 문서와 같은 검색 대상으로 확장
 
-## Phase 2.5: Backend Persistence Foundation
+## Phase 3: Collections & Tags
 
-기본 기반 구성을 마친 단계입니다.
+예정입니다.
 
-- Spring Boot datasource와 PostgreSQL 연결
-- Spring Data JPA, PostgreSQL Driver, Flyway 추가
-- `workspaces` 기본 테이블과 seed data migration 구성
-- `Workspace` entity와 repository 기반 조회 API 구성
-- health API에 database 상태 포함
-- Redis, MinIO, Ollama, Spring AI, RAG pipeline 연동은 후속 Phase에서 구현 예정
+- 지식 항목 collection 구성
+- tag 기반 탐색
+- workspace별 지식 분류
 
-## Phase 3: Auth & RBAC Foundation
+## Phase 4: Summary Generation
 
-기본 기반 구성을 마친 단계입니다.
+예정입니다.
 
-- Spring Security 기반 stateless 인증 구조 구성
-- JWT accessToken JSON body 발급과 Authorization Bearer header 인증 구성
-- BCrypt password hashing 구성
-- `users` 테이블과 JPA entity/repository 구성
-- `workspace_members` 테이블과 workspace membership 역할 골격 구성
-- `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me` 구현
-- 회원가입 시 seed `Default Workspace`에 `MEMBER` membership 연결
-- 인증/인가 테스트 추가
-- refresh token, 사용자별 workspace filtering, 세부 RBAC policy는 후속 작업으로 유지
+- 문서/메모/링크 요약
+- collection 단위 요약
+- 요약 결과 이력 저장
 
-## Phase 3.5: Frontend Auth Integration
+## Phase 5: Sharing & Permissions
 
-기본 기반 구성을 마친 단계입니다.
+예정입니다.
 
-- 로그인 화면 구현
-- 회원가입 화면 구현
-- cookie token storage 기반 API client 구성
-- Zustand 기반 사용자 상태와 `/api/auth/me` 인증 상태 복원 구성
-- TanStack Query 기반 현재 사용자 조회와 workspace 목록 조회 구성
-- 인증 보호 dashboard 구현
-- AppHeader의 Dashboard/Login/Logout 진입점 구성
-- localStorage token 저장 방식에서 browser cookie 저장 방식으로 개선
-- 현재 cookie는 JavaScript가 읽고 쓰는 non-HttpOnly cookie
-- refresh token, HttpOnly Cookie 또는 BFF 인증 구조, 세부 RBAC UI, workspace switching은 후속 작업으로 유지
+- workspace switcher
+- 사용자별 workspace filtering 고도화
+- 세부 RBAC policy
+- 공유 링크 또는 내부 공유 정책 검토
 
-## Phase 4: Document Upload & Storage
+## Phase 6: Monitoring & Deployment
 
-기본 기반 구성을 마친 단계입니다.
+예정입니다.
 
-- 문서 업로드 UI
-- MinIO 객체 저장
-- PostgreSQL 문서 메타데이터 관리
-- 문서 목록 조회
-- 문서 상세 조회
-- 문서 다운로드
-- 문서 soft delete
-- 업로드 상태와 처리 이력 관리
-- 현재는 원본 파일 저장과 메타데이터 관리까지만 구현
-- 문서 텍스트 추출과 chunking은 Document Parsing & Chunking Foundation에서 진행
+- OpenTelemetry 기반 관측성
+- Prometheus/Grafana/Loki 구성
+- 운영용 인증 보안 개선
+- production deployment 정리
 
-## Phase 4.5: Document Parsing & Chunking Foundation
+## 구현된 기반
 
-기본 기반 구성을 마친 단계입니다.
+- 인증
+- 문서 업로드와 MinIO 저장
+- 텍스트 추출과 chunking
+- embedding과 pgvector semantic search
+- RAG Answer API와 Q&A UI
+- Agent Chat session UI와 streaming response
+- Prompt Versioning
+- Querydsl dynamic filtering
 
-- Apache Tika 기반 PDF/TXT/MD 텍스트 추출
-- 문자 수 기반 chunking 구성
-- `document_chunks` 테이블과 JPA entity/repository 구성
-- 문서 처리 상태 `PROCESSING`, `PROCESSED`, `FAILED` 추가
-- `POST /api/documents/{id}/process` 구현
-- `GET /api/documents/{id}/chunks` 구현
-- `/documents` 화면에서 Process 버튼과 chunk 목록 확인 구성
-- token count는 임시로 `content.length / 4` 방식으로 추정
-- embedding 생성과 pgvector similarity search는 Embedding & Vector Search Foundation에서 진행
-- RAG 답변 생성은 다음 단계로 유지
+## 아직 구현하지 않은 영역
 
-## Phase 5: Embedding & Vector Search Foundation
-
-기본 기반 구성을 마친 단계입니다.
-
-- Spring AI Ollama 기반 `nomic-embed-text` embedding model 연동
-- `document_chunks.embedding vector(768)` 저장
-- 문서 단위 embedding 처리 API `POST /api/documents/{id}/embed` 구현
-- 문서 embedding 상태 `NOT_EMBEDDED`, `EMBEDDING`, `EMBEDDED`, `EMBEDDING_FAILED` 관리
-- pgvector cosine distance 기반 semantic chunk search API `POST /api/search/chunks` 구현
-- `/documents` 화면에서 Embed 버튼과 embedding 상태 표시
-- `/search` 화면에서 query 기반 유사 chunk 검색 결과 표시
-- RAG 답변 생성은 Phase 6에서 진행
-
-## Phase 6: RAG Answer API & Q&A UI
-
-기본 기반 구성을 마친 단계입니다.
-
-- semantic search 결과를 context로 사용하는 답변 생성 API `POST /api/rag/answer` 구현
-- Ollama `llama3.2` chat model integration
-- context 기반 한국어 답변 prompt 구성
-- `rag_answers`, `rag_answer_sources` 이력 저장
-- 답변 출처 chunk citation 포함
-- RAG 답변 목록/상세/삭제 API 구현
-- `/rag` Q&A 화면, 답변 카드, 출처 목록, 답변 이력 조회/삭제 UI 구성
-- RAG 단계별 latency metrics 응답/저장/logging 구성
-- 기본 topK 3, context 길이 제한, Ollama `num_predict`/`temperature`/`top_p`/`keep_alive` 적용
-- 현재는 single-turn Q&A이며 Agent Chat streaming은 Phase 7에서 진행
-
-## Phase 7: Agent Chat UI & Streaming Response
-
-기본 기반 구성을 마친 단계입니다.
-
-- Agent Chat session 생성/목록/상세/삭제 API 구성
-- USER/ASSISTANT message 저장
-- 기존 RAG Answer Service를 재사용한 assistant 답변 생성
-- assistant 답변의 source citation과 latency metrics 저장
-- `/agent` 채팅 화면, 이전 세션 목록, 메시지 타임라인 구성
-- `POST /api/agent/sessions/{id}/messages/stream` SSE endpoint 구성
-- fetch streaming 기반 assistant 답변 점진 렌더링
-- streaming 완료 후 assistant 메시지, 출처, latency metrics 저장
-- `/rag`는 단발성 Q&A, `/agent`는 세션형 채팅 UI로 역할 분리
-- 현재는 single-turn RAG 답변을 세션에 저장하는 구조
-- WebSocket, Redis Pub/Sub, multi-turn context memory, tool calling은 후속 개선 후보
-- 이후 Querydsl 동적 조회와 Prompt Versioning 기반으로 확장
-
-## Phase 7.5: Querydsl Dynamic Filtering Foundation
-
-기본 기반 구성을 마친 단계입니다.
-
-- Querydsl JPA와 Jakarta annotation processor 설정
-- `JPAQueryFactory` bean 구성
-- 공통 `PageResponse` 구조 추가
-- 문서 목록 keyword/status/embeddingStatus/date/page/size 조건 조회
-- RAG 답변 이력 keyword/model/date/page/size 조건 조회
-- Agent Chat 세션 keyword/date/page/size 조건 조회
-- 목록 응답은 기존 배열 필드를 유지하면서 `page` 메타데이터를 추가
-- pgvector similarity search와 embedding vector update는 native SQL/JDBC 유지
-- Redis cache와 관리자 통계 dashboard는 아직 구현하지 않음
-- 다음 단계 후보는 Workflow Builder Foundation 또는 Tool Calling Foundation
-
-## Phase 7.6: Prompt Versioning Foundation
-
-기본 기반 구성을 마친 단계입니다.
-
-- Prompt Template 생성/목록/상세/삭제 API 구성
-- Prompt Version 생성/목록/활성화 API 구성
-- Type별 active prompt version 조회 구성
-- Active prompt가 없을 때 기존 동작과 같은 기본 prompt를 lazy 생성
-- RAG Answer 생성 시 active `RAG_ANSWER` prompt version 사용
-- Agent Chat non-streaming/streaming 답변 생성 시 active `AGENT_CHAT` prompt version 사용
-- `rag_answers.prompt_version_id`, `agent_chat_messages.prompt_version_id`로 사용 prompt 추적
-- `/prompts` 관리 화면, version preview, active version 표시/전환 UI 구성
-- `/rag` 답변 카드와 `/agent` assistant message에 prompt template name/version 표시
-- A/B 테스트, 자동 평가, approval workflow, rollback automation은 후속 작업으로 유지
-- 다음 단계 후보는 Workflow Builder Foundation 또는 Tool Calling Foundation
-
-## Phase 8: Workflow Builder
-
-향후 구현 예정입니다.
-
-- React Flow 기반 워크플로우 편집 화면
-- 트리거, 조건, 액션 노드 모델
-- 실행 로그와 실패 재시도 구조
-
-## Phase 9: AI Release Copilot
-
-향후 구현 예정입니다.
-
-- 변경 이력 요약
-- 릴리스 노트 초안 생성
-- PR 또는 commit 기반 요약 흐름 검토
-
-## Phase 10: Monitoring & Observability
-
-향후 구현 예정입니다.
-
-- OpenTelemetry instrumentation
-- Prometheus metric 수집
-- Loki log 수집
-- Grafana dashboard 구성
-
-## Phase 11: Deployment & Portfolio Polish
-
-향후 구현 예정입니다.
-
-- GitHub Actions CI 고도화
-- Nginx reverse proxy 구성
-- Oracle Cloud Always Free 또는 local server 배포 검토
-- 포트폴리오용 스크린샷, 아키텍처 설명, 시연 흐름 정리
+- Notes
+- Links
+- Collections
+- Knowledge Tags
+- Summary generation
+- Sharing/permissions 고도화
+- Monitoring
+- Production deployment

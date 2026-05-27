@@ -1,40 +1,45 @@
-export const PROJECT_NAME = "AssistOps Free";
+export const PROJECT_NAME = "AI Knowledge Hub";
 
 export const PROJECT_DESCRIPTION =
-  "로컬 LLM과 오픈소스 인프라 기반 AI 업무 자동화 플랫폼";
+  "AI Knowledge Hub는 문서, 메모, 링크, 대화를 한곳에 모으고 로컬 LLM과 RAG를 통해 검색·요약·질의응답을 제공하는 지식 관리 플랫폼입니다.";
 
 export const statusCards = [
   {
     id: "frontend",
-    title: "Frontend",
+    title: "Knowledge Library",
     status: "Ready",
   },
   {
     id: "backend",
-    title: "Backend",
-    status: "Auth Ready",
+    title: "Document Upload",
+    status: "Ready",
   },
   {
     id: "local-ai",
-    title: "Local AI",
-    status: "Planned",
+    title: "Semantic Search",
+    status: "Ready",
   },
   {
     id: "database",
-    title: "Database",
-    status: "Connected",
+    title: "RAG Q&A",
+    status: "Ready",
   },
   {
     id: "monitoring",
-    title: "Monitoring",
-    status: "Planned",
+    title: "Agent Chat",
+    status: "Ready",
+  },
+  {
+    id: "prompts",
+    title: "Prompt Versioning",
+    status: "Ready",
   },
 ] as const;
 
 export const techStackGroups = [
   {
     title: "Frontend",
-    description: "Next.js App Router, React, TypeScript, Tailwind CSS",
+    description: "Next.js App Router, React, TypeScript, Tailwind CSS, shadcn/ui",
   },
   {
     title: "Backend",
@@ -42,7 +47,7 @@ export const techStackGroups = [
   },
   {
     title: "AI",
-    description: "Ollama, local LLM, embeddings, RAG pipeline",
+    description: "Ollama, local embeddings, semantic search, RAG Q&A, Agent Chat",
   },
   {
     title: "Database / Storage",
@@ -59,18 +64,13 @@ export const techStackGroups = [
 ] as const;
 
 export const roadmapPhases = [
-  "Phase 0: Monorepo & Frontend Foundation",
-  "Phase 1: Spring Boot API Foundation",
-  "Phase 2: Local Infrastructure with Docker Compose",
-  "Phase 3: Auth & RBAC Foundation",
-  "Phase 3.5: Frontend Auth Integration",
-  "Phase 4: Document Upload & Storage",
-  "Phase 5: RAG Pipeline with Ollama and pgvector",
-  "Phase 6: Agent Chat UI",
-  "Phase 7: Workflow Builder",
-  "Phase 8: AI Release Copilot",
-  "Phase 9: Monitoring & Observability",
-  "Phase 10: Deployment & Portfolio Polish",
+  "Phase 0: Rebranding to AI Knowledge Hub",
+  "Phase 1: Knowledge Library Foundation",
+  "Phase 2: Notes & Links",
+  "Phase 3: Collections & Tags",
+  "Phase 4: Summary Generation",
+  "Phase 5: Sharing & Permissions",
+  "Phase 6: Monitoring & Deployment",
 ] as const;
 
 export const architectureItems = {
@@ -79,23 +79,27 @@ export const architectureItems = {
     "Spring Boot API",
     "JWT Auth API",
     "Frontend Auth UI",
-    "Dashboard 초기 화면",
-    "Workspace 목록 조회",
+    "Document Upload",
+    "MinIO original file storage",
+    "Document parsing and chunking",
+    "Ollama embedding generation",
+    "pgvector semantic search",
+    "RAG Q&A",
+    "Agent Chat",
+    "Prompt Versioning",
+    "Querydsl dynamic filtering",
   ],
   planned: [
-    "Refresh token",
+    "Notes",
+    "Links",
+    "Collections",
+    "Knowledge tags",
+    "Summary generation",
+    "Sharing and permissions 고도화",
+    "Refresh token 또는 HttpOnly Cookie auth",
     "Workspace switcher",
-    "Document upload",
-    "RAG pipeline",
-    "Ollama integration",
-    "Workflow Builder",
-    "Redis",
-    "MinIO",
-    "Nginx",
-    "OpenTelemetry",
-    "Prometheus",
-    "Grafana",
-    "Loki",
+    "Monitoring",
+    "Production deployment",
   ],
 } as const;
 
