@@ -16,6 +16,7 @@ import com.assistops.api.document.Document;
 import com.assistops.api.document.DocumentChunk;
 import com.assistops.api.document.DocumentChunkRepository;
 import com.assistops.api.document.DocumentRepository;
+import com.assistops.api.prompt.PromptVersion;
 import com.assistops.api.rag.generation.RagGenerationService;
 import com.assistops.api.rag.generation.RagGenerationResult;
 import com.assistops.api.rag.search.ChunkSearchRequest;
@@ -89,7 +90,7 @@ class RagAnswerControllerTest extends AbstractPostgresContainerTest {
 		documentRepository.deleteAll();
 
 		given(ragGenerationService.modelName()).willReturn("llama3.2");
-		given(ragGenerationService.generateAnswer(any(), any()))
+		given(ragGenerationService.generateAnswer(any(), any(), any(PromptVersion.class)))
 			.willReturn(new RagGenerationResult(
 				"문서에 따르면 AssistOps Free는 로컬 인프라 기반 자동화 플랫폼입니다.",
 				4,
@@ -112,6 +113,7 @@ class RagAnswerControllerTest extends AbstractPostgresContainerTest {
 	@Test
 	void answerSucceedsWithAuthentication() throws Exception {
 		RegisteredUser registeredUser = register();
+		String activePromptVersionId = createPromptTemplate(registeredUser.accessToken(), "RAG Active Prompt");
 		ChunkSearchResult source = createSourceResult(registeredUser);
 		given(chunkSearchService.searchWithMetrics(any(), any(ChunkSearchRequest.class)))
 			.willReturn(new ChunkSearchService.ChunkSearchResultWithMetrics(
@@ -133,6 +135,9 @@ class RagAnswerControllerTest extends AbstractPostgresContainerTest {
 			.andExpect(jsonPath("$.question").value("AssistOps Free는 무엇인가요?"))
 			.andExpect(jsonPath("$.answer").value("문서에 따르면 AssistOps Free는 로컬 인프라 기반 자동화 플랫폼입니다."))
 			.andExpect(jsonPath("$.model").value("llama3.2"))
+			.andExpect(jsonPath("$.promptVersionId").value(activePromptVersionId))
+			.andExpect(jsonPath("$.promptTemplateName").value("RAG Active Prompt"))
+			.andExpect(jsonPath("$.promptVersion").value(1))
 			.andExpect(jsonPath("$.latencyMetrics.totalMs").exists())
 			.andExpect(jsonPath("$.latencyMetrics.queryEmbeddingMs").value(11))
 			.andExpect(jsonPath("$.latencyMetrics.vectorSearchMs").value(22))
@@ -159,7 +164,12 @@ class RagAnswerControllerTest extends AbstractPostgresContainerTest {
 		assertThat(savedAnswer.getSourceCount()).isEqualTo(1);
 		assertThat(savedAnswer.getPromptContextCharCount()).isEqualTo(120);
 		assertThat(savedAnswer.getAnswerCharCount()).isEqualTo(45);
+		assertThat(savedAnswer.getPromptVersionId()).isEqualTo(UUID.fromString(activePromptVersionId));
 		assertThat(ragAnswerSourceRepository.countByRagAnswerId(answerId)).isEqualTo(1);
+
+		ArgumentCaptor<PromptVersion> promptVersionCaptor = ArgumentCaptor.forClass(PromptVersion.class);
+		verify(ragGenerationService).generateAnswer(any(), any(), promptVersionCaptor.capture());
+		assertThat(promptVersionCaptor.getValue().getId()).isEqualTo(UUID.fromString(activePromptVersionId));
 	}
 
 	@Test
@@ -186,7 +196,7 @@ class RagAnswerControllerTest extends AbstractPostgresContainerTest {
 			.andExpect(jsonPath("$.latencyMetrics.promptContextCharCount").value(0))
 			.andExpect(jsonPath("$.sources").isEmpty());
 
-		verify(ragGenerationService, never()).generateAnswer(any(), any());
+		verify(ragGenerationService, never()).generateAnswer(any(), any(), any(PromptVersion.class));
 		assertThat(ragAnswerRepository.findAll()).hasSize(1);
 		assertThat(ragAnswerSourceRepository.findAll()).isEmpty();
 	}
@@ -398,6 +408,23 @@ class RagAnswerControllerTest extends AbstractPostgresContainerTest {
 			.andReturn();
 
 		return JsonPath.read(result.getResponse().getContentAsString(), "$.answerId");
+	}
+
+	private String createPromptTemplate(String accessToken, String name) throws Exception {
+		MvcResult result = mockMvc.perform(post("/api/prompts")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(Map.of(
+					"name", name,
+					"type", "RAG_ANSWER",
+					"systemPrompt", "답변은 {{language}}로 하고 제공된 문서만 사용하세요.",
+					"userPromptTemplate", "Context:\n{{context}}\n\nQuestion:\n{{question}}\n\nAnswer:",
+					"contextTemplate", "[{{index}}] {{documentName}} / chunkIndex={{chunkIndex}}\n{{content}}"
+				))))
+			.andExpect(status().isOk())
+			.andReturn();
+
+		return JsonPath.read(result.getResponse().getContentAsString(), "$.activeVersionId");
 	}
 
 	private ChunkSearchResult createSourceResult(RegisteredUser registeredUser) {

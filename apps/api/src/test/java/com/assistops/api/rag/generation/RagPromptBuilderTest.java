@@ -2,6 +2,8 @@ package com.assistops.api.rag.generation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.assistops.api.prompt.DefaultPromptContent;
+import com.assistops.api.prompt.PromptVersion;
 import com.assistops.api.rag.search.ChunkSearchResult;
 import java.util.List;
 import java.util.UUID;
@@ -26,7 +28,7 @@ class RagPromptBuilderTest {
 		ChunkSearchResult first = result("abcdefghijklmnop");
 		ChunkSearchResult second = result("qrstuvwxyz123456");
 
-		RagPromptBuilder.RagPrompt prompt = builder.build("질문", List.of(first, second));
+		RagPromptBuilder.RagPrompt prompt = builder.build("질문", List.of(first, second), defaultPromptVersion());
 
 		assertThat(prompt.contextCharCount()).isEqualTo(15);
 		assertThat(prompt.text()).contains("abcdefghij");
@@ -46,6 +48,18 @@ class RagPromptBuilderTest {
 			0.9,
 			0.1,
 			"nomic-embed-text"
+		);
+	}
+
+	private PromptVersion defaultPromptVersion() {
+		return new PromptVersion(
+			UUID.randomUUID(),
+			1,
+			DefaultPromptContent.SYSTEM_PROMPT,
+			DefaultPromptContent.USER_PROMPT_TEMPLATE,
+			DefaultPromptContent.CONTEXT_TEMPLATE,
+			null,
+			UUID.randomUUID()
 		);
 	}
 }

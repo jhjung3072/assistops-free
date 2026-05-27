@@ -1,0 +1,3 @@
+-- Default prompt rows need a real users.id value for created_by.
+-- AssistOps creates default prompt templates lazily in PromptService when an authenticated user first needs them.
+-- This keeps fresh local databases valid before the first user signs up.

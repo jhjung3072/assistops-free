@@ -1,5 +1,6 @@
 package com.assistops.api.agent;
 
+import com.assistops.api.prompt.PromptVersionMetadata;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -10,6 +11,9 @@ public record AgentChatMessageResponse(
 	AgentChatRole role,
 	String content,
 	UUID ragAnswerId,
+	UUID promptVersionId,
+	String promptTemplateName,
+	Integer promptVersion,
 	String model,
 	Long totalMs,
 	Long chatGenerationMs,
@@ -20,7 +24,8 @@ public record AgentChatMessageResponse(
 
 	public static AgentChatMessageResponse from(
 		AgentChatMessage message,
-		List<AgentChatMessageSource> sources
+		List<AgentChatMessageSource> sources,
+		PromptVersionMetadata promptVersionMetadata
 	) {
 		return new AgentChatMessageResponse(
 			message.getId(),
@@ -28,6 +33,9 @@ public record AgentChatMessageResponse(
 			message.getRole(),
 			message.getContent(),
 			message.getRagAnswerId(),
+			message.getPromptVersionId(),
+			promptVersionMetadata == null ? null : promptVersionMetadata.promptTemplateName(),
+			promptVersionMetadata == null ? null : promptVersionMetadata.promptVersion(),
 			message.getModel(),
 			message.getTotalMs(),
 			message.getChatGenerationMs(),

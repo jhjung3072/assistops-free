@@ -1,5 +1,6 @@
 package com.assistops.api.rag.generation;
 
+import com.assistops.api.prompt.PromptVersion;
 import com.assistops.api.rag.search.ChunkSearchResult;
 import java.util.List;
 import java.util.function.Consumer;
@@ -25,23 +26,25 @@ public class OllamaChatService implements RagGenerationService {
 	}
 
 	@Override
-	public RagGenerationResult generateAnswer(String question, List<ChunkSearchResult> sources) {
+	public RagGenerationResult generateAnswer(String question, List<ChunkSearchResult> sources, PromptVersion promptVersion) {
 		long promptBuildStart = System.nanoTime();
-		RagPromptBuilder.RagPrompt prompt = ragPromptBuilder.build(question, sources);
+		RagPromptBuilder.RagPrompt prompt = ragPromptBuilder.build(question, sources, promptVersion);
 		long promptBuildMs = elapsedMs(promptBuildStart);
+		String model = modelName(promptVersion);
 
 		if (!prompt.hasContext()) {
 			return new RagGenerationResult(
 				"제공된 문서만으로는 답변하기 어렵습니다.",
 				promptBuildMs,
 				0,
-				0
+				0,
+				model
 			);
 		}
 
 		try {
 			long chatGenerationStart = System.nanoTime();
-			ChatResponse response = chatModel.call(new Prompt(prompt.text(), chatOptions()));
+			ChatResponse response = chatModel.call(new Prompt(prompt.text(), chatOptions(promptVersion)));
 			long chatGenerationMs = elapsedMs(chatGenerationStart);
 			Generation result = response.getResult();
 			String answer = result == null || result.getOutput() == null
@@ -56,7 +59,8 @@ public class OllamaChatService implements RagGenerationService {
 				answer.trim(),
 				promptBuildMs,
 				chatGenerationMs,
-				prompt.contextCharCount()
+				prompt.contextCharCount(),
+				model
 			);
 		}
 		catch (RagGenerationException exception) {
@@ -74,23 +78,25 @@ public class OllamaChatService implements RagGenerationService {
 	public RagGenerationResult generateAnswerStream(
 		String question,
 		List<ChunkSearchResult> sources,
+		PromptVersion promptVersion,
 		Consumer<String> tokenConsumer
 	) {
 		long promptBuildStart = System.nanoTime();
-		RagPromptBuilder.RagPrompt prompt = ragPromptBuilder.build(question, sources);
+		RagPromptBuilder.RagPrompt prompt = ragPromptBuilder.build(question, sources, promptVersion);
 		long promptBuildMs = elapsedMs(promptBuildStart);
+		String model = modelName(promptVersion);
 
 		if (!prompt.hasContext()) {
 			String answer = "제공된 문서만으로는 답변하기 어렵습니다.";
 			tokenConsumer.accept(answer);
-			return new RagGenerationResult(answer, promptBuildMs, 0, 0);
+			return new RagGenerationResult(answer, promptBuildMs, 0, 0, model);
 		}
 
 		try {
 			StringBuilder answer = new StringBuilder();
 			long chatGenerationStart = System.nanoTime();
 
-			chatModel.stream(new Prompt(prompt.text(), chatOptions()))
+			chatModel.stream(new Prompt(prompt.text(), chatOptions(promptVersion)))
 				.map(this::extractText)
 				.filter(StringUtils::hasText)
 				.doOnNext(token -> {
@@ -110,7 +116,8 @@ public class OllamaChatService implements RagGenerationService {
 				normalizedAnswer,
 				promptBuildMs,
 				chatGenerationMs,
-				prompt.contextCharCount()
+				prompt.contextCharCount(),
+				model
 			);
 		}
 		catch (RagGenerationException exception) {
@@ -129,9 +136,13 @@ public class OllamaChatService implements RagGenerationService {
 		return properties.chatModel();
 	}
 
-	private OllamaChatOptions chatOptions() {
+	private String modelName(PromptVersion promptVersion) {
+		return StringUtils.hasText(promptVersion.getModel()) ? promptVersion.getModel() : properties.chatModel();
+	}
+
+	private OllamaChatOptions chatOptions(PromptVersion promptVersion) {
 		return OllamaChatOptions.builder()
-			.model(properties.chatModel())
+			.model(modelName(promptVersion))
 			.numPredict(properties.numPredict())
 			.temperature(properties.temperature())
 			.topP(properties.topP())

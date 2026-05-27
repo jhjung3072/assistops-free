@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bot,
   BriefcaseBusiness,
+  FileSliders,
   FileSearch,
   FileText,
   LogOut,
@@ -188,6 +189,26 @@ export default function DashboardPage() {
                 className={buttonVariants({ variant: "outline" })}
               >
                 AI Agent Chat 시작하기
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileSliders aria-hidden="true" />
+                Prompt Versioning
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                RAG와 Agent 답변에 쓰이는 prompt template과 active version을 관리합니다.
+              </p>
+              <Link
+                href="/prompts"
+                className={buttonVariants({ variant: "outline" })}
+              >
+                프롬프트 버전 관리
               </Link>
             </CardContent>
           </Card>

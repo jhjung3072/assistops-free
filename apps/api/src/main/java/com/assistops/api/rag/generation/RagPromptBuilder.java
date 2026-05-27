@@ -1,5 +1,7 @@
 package com.assistops.api.rag.generation;
 
+import com.assistops.api.prompt.DefaultPromptContent;
+import com.assistops.api.prompt.PromptVersion;
 import com.assistops.api.rag.search.ChunkSearchResult;
 import java.util.List;
 import org.springframework.stereotype.Component;
@@ -16,20 +18,30 @@ public class RagPromptBuilder {
 		this.properties = properties;
 	}
 
-	public RagPrompt build(String question, List<ChunkSearchResult> sources) {
-		StringBuilder builder = new StringBuilder();
+	public RagPrompt build(String question, List<ChunkSearchResult> sources, PromptVersion promptVersion) {
+		ContextBuildResult context = buildContext(sources, promptVersion);
+		String systemPrompt = replaceCommonPlaceholders(
+			defaultIfBlank(promptVersion.getSystemPrompt(), DefaultPromptContent.SYSTEM_PROMPT),
+			question,
+			context.text()
+		);
+		String userPromptTemplate = defaultIfBlank(
+			promptVersion.getUserPromptTemplate(),
+			DefaultPromptContent.USER_PROMPT_TEMPLATE
+		);
+		String userPrompt = replaceCommonPlaceholders(userPromptTemplate, question, context.text());
 
-		builder.append("""
-			답변 규칙:
-			- 제공된 Context만 근거로 한국어로 답하세요.
-			- 추측하지 마세요.
-			- 근거가 부족하면 정확히 "제공된 문서만으로는 답변하기 어렵습니다."라고 답하세요.
+		return new RagPrompt(systemPrompt.trim() + "\n\n" + userPrompt.trim(), context.contextCharCount());
+	}
 
-			Context:
-			""");
-
-		int contextCharCount = 0;
+	private ContextBuildResult buildContext(List<ChunkSearchResult> sources, PromptVersion promptVersion) {
+		String contextTemplate = defaultIfBlank(
+			promptVersion.getContextTemplate(),
+			DefaultPromptContent.CONTEXT_TEMPLATE
+		);
+		StringBuilder contextBuilder = new StringBuilder();
 		int remainingContextChars = properties.contextTotalMaxChars();
+		int contextCharCount = 0;
 
 		for (int index = 0; index < sources.size(); index++) {
 			if (remainingContextChars <= 0) {
@@ -45,22 +57,11 @@ public class RagPromptBuilder {
 			contextCharCount += content.length();
 			remainingContextChars -= content.length();
 
-			builder.append("\n[")
-				.append(index + 1)
-				.append("] ")
-				.append(source.documentName())
-				.append(" / chunkIndex=")
-				.append(source.chunkIndex())
-				.append("\n")
-				.append(content)
+			contextBuilder.append(renderContext(contextTemplate, source, index + 1, content))
 				.append('\n');
 		}
 
-		builder.append("\nQuestion:\n")
-			.append(question)
-			.append("\n\nAnswer:");
-
-		return new RagPrompt(builder.toString(), contextCharCount);
+		return new ContextBuildResult(contextBuilder.toString().trim(), contextCharCount);
 	}
 
 	private String limitedContent(String content, int remainingContextChars) {
@@ -78,10 +79,33 @@ public class RagPromptBuilder {
 		return normalized.substring(0, limit).trim();
 	}
 
+	private String renderContext(String template, ChunkSearchResult source, int index, String content) {
+		return template
+			.replace("{{index}}", String.valueOf(index))
+			.replace("{{documentName}}", source.documentName())
+			.replace("{{chunkIndex}}", String.valueOf(source.chunkIndex()))
+			.replace("{{content}}", content)
+			.trim();
+	}
+
+	private String replaceCommonPlaceholders(String template, String question, String context) {
+		return template
+			.replace("{{context}}", context)
+			.replace("{{question}}", question)
+			.replace("{{language}}", "한국어");
+	}
+
+	private String defaultIfBlank(String value, String fallback) {
+		return StringUtils.hasText(value) ? value : fallback;
+	}
+
 	public record RagPrompt(String text, int contextCharCount) {
 
 		public boolean hasContext() {
 			return contextCharCount > 0;
 		}
+	}
+
+	private record ContextBuildResult(String text, int contextCharCount) {
 	}
 }

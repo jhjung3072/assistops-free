@@ -38,6 +38,9 @@ public class AgentChatMessage {
 	@Column(name = "rag_answer_id")
 	private UUID ragAnswerId;
 
+	@Column(name = "prompt_version_id")
+	private UUID promptVersionId;
+
 	@Column(length = 255)
 	private String model;
 
@@ -69,6 +72,7 @@ public class AgentChatMessage {
 		RagLatencyMetrics metrics = answer.latencyMetrics();
 
 		message.ragAnswerId = answer.answerId();
+		message.promptVersionId = answer.promptVersionId();
 		message.model = answer.model();
 		message.totalMs = metrics == null ? null : metrics.totalMs();
 		message.chatGenerationMs = metrics == null ? null : metrics.chatGenerationMs();

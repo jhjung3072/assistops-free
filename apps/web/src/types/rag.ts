@@ -36,6 +36,9 @@ export type RagAnswerResponse = {
   answer: string;
   model: string;
   topK: number;
+  promptVersionId: string | null;
+  promptTemplateName: string | null;
+  promptVersion: number | null;
   createdAt: string;
   sources: RagAnswerSource[];
   latencyMetrics?: RagLatencyMetrics | null;
@@ -50,6 +53,7 @@ export type RagAnswerSummary = {
   answerPreview: string;
   model: string;
   topK: number;
+  promptVersionId: string | null;
   sourceCount: number;
   totalMs: number | null;
   createdAt: string;

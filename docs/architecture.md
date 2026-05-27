@@ -1,6 +1,6 @@
 # Architecture
 
-이 문서는 `AssistOps Free`의 목표 아키텍처를 정리합니다. 현재 구현된 영역은 `apps/web` 프론트엔드, `apps/api` Spring Boot API, Docker Compose 기반 로컬 인프라 실행 구성, Spring Boot API와 PostgreSQL 연결, JWT Bearer Auth API, Frontend Auth UI, Dashboard 초기 화면, Workspace 목록 조회, Document Upload UI, Document API, MinIO original file storage, Document Parsing, Document Chunking, Embedding generation, pgvector embedding storage, Semantic chunk search, RAG Answer generation, Source citation, Agent Chat Session, Agent Message History, Agent Chat Streaming Response, Querydsl dynamic list filtering입니다. Redis Pub/Sub과 tool calling은 아직 애플리케이션 코드와 연결하지 않았습니다.
+이 문서는 `AssistOps Free`의 목표 아키텍처를 정리합니다. 현재 구현된 영역은 `apps/web` 프론트엔드, `apps/api` Spring Boot API, Docker Compose 기반 로컬 인프라 실행 구성, Spring Boot API와 PostgreSQL 연결, JWT Bearer Auth API, Frontend Auth UI, Dashboard 초기 화면, Workspace 목록 조회, Document Upload UI, Document API, MinIO original file storage, Document Parsing, Document Chunking, Embedding generation, pgvector embedding storage, Semantic chunk search, RAG Answer generation, Source citation, Agent Chat Session, Agent Message History, Agent Chat Streaming Response, Querydsl dynamic list filtering, Prompt Template/Version 관리와 prompt traceability입니다. Redis Pub/Sub과 tool calling은 아직 애플리케이션 코드와 연결하지 않았습니다.
 
 ## 현재 단계
 
@@ -16,12 +16,14 @@
 - RAG Performance: 단계별 latency 측정, prompt context 길이 제한, Ollama generation option과 keep_alive 적용
 - Agent Chat: RAG Answer Service를 재사용해 session, user/assistant message, source citation, latency metrics 저장
 - Agent Streaming: Spring MVC `SseEmitter`와 Spring AI Ollama streaming 호출로 assistant token을 `text/event-stream`으로 전송
+- Prompt Versioning: RAG/Agent 답변 생성 prompt를 DB template/version으로 관리하고 active version을 추적
 - Auth: Spring Security, JWT access token JSON body 발급, Authorization Bearer header 인증, BCrypt password hashing, `/api/auth/register`, `/api/auth/login`, `/api/auth/me` 구성
 - Frontend Auth: browser cookie token storage, cookie에서 accessToken을 읽어 Authorization header를 붙이는 fetch API client, TanStack Query, Zustand auth store, AuthGuard 구성
 - Document UI: 문서 업로드, 목록 조회, 다운로드, 삭제, 처리, embedding 실행 화면 구성
 - Search UI: query 입력, topK 설정, semantic chunk search 결과 확인 화면 구성
 - RAG UI: 질문 입력, 답변 표시, 출처 chunk 표시, 답변 이력 조회/삭제 구성
 - Agent UI: 세션 목록, 메시지 타임라인, assistant streaming 렌더링, 출처와 latency 표시, 세션 삭제 구성
+- Prompt UI: prompt template/version 생성, active version 전환, preview, RAG/Agent 답변 prompt version 표시 구성
 - RBAC: `workspace_members` 테이블 기반 역할 골격 구성. 세부 policy와 사용자별 workspace filtering은 예정
 - 루트 workspace: `apps/web` 등록
 - 문서화: 목표 아키텍처와 로드맵 작성 중
@@ -49,6 +51,9 @@ flowchart LR
   api --> agent[Agent Chat API]
   agent --> rag
   agent --> postgres
+  api --> prompts[Prompt Versioning API]
+  prompts --> postgres
+  rag --> prompts
   documents --> minio[(MinIO)]
   api -. 향후 연결 .-> redis[(Redis)]
   api --> otel[OpenTelemetry 예정]
@@ -72,9 +77,11 @@ flowchart LR
 | Semantic Search UI | query 기반 유사 chunk 검색 결과 확인 | 사용 중 |
 | RAG Q&A UI | 문서 근거 기반 질문, 답변, 출처, 이력 조회/삭제 | 사용 중 |
 | Agent Chat UI | RAG Answer를 세션형 채팅 UX로 저장하고 streaming 렌더링 | 사용 중 |
+| Prompt Management UI | prompt template/version 관리, active version 전환, preview | 사용 중 |
 | TanStack Query + Zustand | API 요청 상태와 사용자 인증 상태 관리 | 사용 중 |
 | PostgreSQL + pgvector | 업무 데이터, 문서 메타데이터, document chunks, embedding vector 저장과 cosine distance 검색 | 사용 중 |
 | Querydsl | 문서 목록, RAG 답변 이력, Agent Chat 세션 목록의 동적 검색/필터링/페이징 | 사용 중 |
+| Prompt Versioning | RAG/Agent prompt template, version, active prompt, traceability | 사용 중 |
 | Spring Security + JWT | stateless 인증과 API 보호 | 사용 중 |
 | Workspace membership | workspace 단위 권한 모델 기반 | 기반 구성 |
 | Redis | 캐시, 세션, 비동기 작업 보조 저장소 | 로컬 인프라 구성, 앱 미연동 |
@@ -99,13 +106,14 @@ flowchart LR
 5. 문서 텍스트를 추출하고 chunking 후 `document_chunks`에 저장합니다.
 6. chunk content를 Ollama embedding model로 vector화하고 pgvector `embedding vector(768)` 컬럼에 저장합니다.
 7. Semantic search 요청은 query embedding과 pgvector cosine distance로 가까운 chunk를 반환합니다.
-8. RAG answer 요청은 semantic search 결과를 context로 묶어 Ollama chat model이 답변을 생성합니다.
-9. prompt에는 chunk별 800자, 전체 context 3000자 기본 제한을 적용합니다.
-10. 답변과 출처 chunk, latency metrics는 `rag_answers`, `rag_answer_sources`에 저장합니다.
-11. Agent Chat non-streaming 요청은 사용자 메시지를 저장한 뒤 기존 RAG Answer Service를 호출하고, assistant 메시지와 출처, latency metrics를 `agent_chat_*` 테이블에 저장합니다.
-12. Agent Chat streaming 요청은 USER 메시지를 즉시 저장하고, source/token/latency/done/error 이벤트를 SSE 형식으로 전송한 뒤 ASSISTANT 메시지를 저장합니다.
-13. backend log에는 query embedding, vector search, prompt build, chat generation, persist 단계별 latency summary를 남깁니다.
-14. 시스템 지표, 로그, trace는 OpenTelemetry 기반으로 수집하고 Prometheus, Loki, Grafana로 확인합니다.
+8. RAG answer 요청은 active `RAG_ANSWER` prompt version과 semantic search 결과 context를 사용해 Ollama chat model 답변을 생성합니다.
+9. Agent Chat 요청은 active `AGENT_CHAT` prompt version을 사용하고, 기존 RAG Answer Service의 검색/생성 흐름을 재사용합니다.
+10. prompt에는 chunk별 800자, 전체 context 3000자 기본 제한을 적용합니다.
+11. 답변과 출처 chunk, latency metrics, prompt version 참조는 `rag_answers`, `rag_answer_sources`에 저장합니다.
+12. Agent Chat non-streaming 요청은 사용자 메시지를 저장한 뒤 기존 RAG Answer Service를 호출하고, assistant 메시지와 출처, latency metrics, prompt version 참조를 `agent_chat_*` 테이블에 저장합니다.
+13. Agent Chat streaming 요청은 USER 메시지를 즉시 저장하고, source/token/latency/done/error 이벤트를 SSE 형식으로 전송한 뒤 ASSISTANT 메시지를 저장합니다.
+14. backend log에는 query embedding, vector search, prompt build, chat generation, persist 단계별 latency summary를 남깁니다.
+15. 시스템 지표, 로그, trace는 OpenTelemetry 기반으로 수집하고 Prometheus, Loki, Grafana로 확인합니다.
 
 ## Local Infrastructure
 
@@ -119,7 +127,7 @@ flowchart LR
 | MinIO Console | `9001` | 개발 중 bucket/object 확인 |
 | Ollama | `11434` | Spring AI embedding/chat 호출에 연결 |
 
-현재 단계는 PostgreSQL 연결, JPA/Flyway 영속성 골격, Querydsl 기반 동적 목록 조회, JWT Bearer 인증 기반, workspace membership 기반 권한 골격, 프론트엔드 인증 화면, dashboard 초기 화면, 문서 업로드 및 원본 저장, 문서 텍스트 추출과 chunk 저장, Ollama embedding 생성, pgvector 유사 chunk 검색, Ollama chat model 기반 RAG 답변 생성, Agent Chat 세션 저장, Agent Chat streaming response까지 다룹니다. Redis client와 queue 기반 비동기 처리는 아직 추가하지 않았습니다.
+현재 단계는 PostgreSQL 연결, JPA/Flyway 영속성 골격, Querydsl 기반 동적 목록 조회, JWT Bearer 인증 기반, workspace membership 기반 권한 골격, 프론트엔드 인증 화면, dashboard 초기 화면, 문서 업로드 및 원본 저장, 문서 텍스트 추출과 chunk 저장, Ollama embedding 생성, pgvector 유사 chunk 검색, Ollama chat model 기반 RAG 답변 생성, Agent Chat 세션 저장, Agent Chat streaming response, Prompt Versioning 기반까지 다룹니다. Redis client와 queue 기반 비동기 처리는 아직 추가하지 않았습니다.
 
 ## 현재 문서 저장 흐름
 
@@ -138,8 +146,9 @@ flowchart LR
 13. 답변과 출처, latency metrics는 `rag_answers`, `rag_answer_sources`에 저장하고 `/rag`에서 조회/삭제합니다.
 14. `/api/agent/sessions/{id}/messages`는 USER 메시지를 저장하고 기존 RAG Answer Service로 ASSISTANT 답변을 생성한 뒤, 출처와 latency 핵심 지표를 메시지에 연결합니다.
 15. `/api/agent/sessions/{id}/messages/stream`은 같은 흐름을 SSE/fetch stream으로 제공하며, event type은 `metadata`, `source`, `token`, `latency`, `done`, `error`입니다.
-16. 목록/상세/다운로드/삭제/처리/chunk 조회/embedding/search/RAG/Agent API는 사용자가 속한 workspace 또는 본인 session에 대해서만 동작합니다.
-17. 문서 목록, RAG 답변 이력, Agent Chat 세션 목록은 Querydsl로 keyword/status/model/date/page/size 조건을 조합합니다.
+16. `/api/prompts`는 prompt template/version을 관리하고 active version을 전환합니다. RAG/Agent 답변 생성 시 사용한 prompt version은 응답과 이력에 함께 남깁니다.
+17. 목록/상세/다운로드/삭제/처리/chunk 조회/embedding/search/RAG/Agent/Prompt API는 사용자가 속한 workspace 또는 본인 session에 대해서만 동작합니다.
+18. 문서 목록, RAG 답변 이력, Agent Chat 세션 목록은 Querydsl로 keyword/status/model/date/page/size 조건을 조합합니다.
 
 ## 데이터 조회 전략
 
@@ -151,7 +160,7 @@ flowchart LR
 
 pgvector similarity search는 Querydsl로 억지 추상화하지 않고 native SQL/JDBC 기반을 유지합니다. Querydsl은 우선 화면 목록 조회와 필터링에만 적용합니다.
 
-현재 단계에서는 WebSocket, Redis Pub/Sub, multi-turn context memory, tool calling, prompt versioning UI, workflow automation, release copilot을 수행하지 않습니다.
+현재 단계에서는 WebSocket, Redis Pub/Sub, multi-turn context memory, tool calling, prompt evaluation, prompt approval workflow, A/B test, rollback automation, workflow automation, release copilot을 수행하지 않습니다.
 
 ## 현재 인증 흐름
 
@@ -167,6 +176,6 @@ PostgreSQL은 Docker named volume에 데이터를 저장합니다. 개발 중 `P
 
 ## 구현 상태 구분
 
-현재 이 문서는 목표 아키텍처를 설명합니다. 실제 구현 완료로 볼 수 있는 범위는 Next.js 프론트엔드, Spring Boot API, health API, JWT Auth API, 프론트엔드 로그인/회원가입/dashboard/documents/search/rag/agent 화면, 인증이 필요한 workspace 조회 API, 문서 업로드/목록/상세/다운로드/삭제/처리/chunk 조회/embedding/search/RAG answer/Agent Chat API, Agent Chat streaming API, Querydsl 기반 동적 목록 조회, PostgreSQL 연결, Flyway migration, JPA entity, workspace membership foundation, MinIO 원본 파일 저장, Apache Tika 텍스트 추출, document chunk 저장, Spring AI Ollama embedding/chat 호출, pgvector embedding 저장과 유사 chunk 검색, source citation, RAG answer history 저장, Agent Chat session/message history 저장, RAG latency metrics, prompt context 제한, Ollama generation option 적용, 프론트엔드 Web CI, API CI, Docker Compose 로컬 인프라 실행 구성까지입니다.
+현재 이 문서는 목표 아키텍처를 설명합니다. 실제 구현 완료로 볼 수 있는 범위는 Next.js 프론트엔드, Spring Boot API, health API, JWT Auth API, 프론트엔드 로그인/회원가입/dashboard/documents/search/rag/agent/prompts 화면, 인증이 필요한 workspace 조회 API, 문서 업로드/목록/상세/다운로드/삭제/처리/chunk 조회/embedding/search/RAG answer/Agent Chat/Prompt API, Agent Chat streaming API, Querydsl 기반 동적 목록 조회, PostgreSQL 연결, Flyway migration, JPA entity, workspace membership foundation, MinIO 원본 파일 저장, Apache Tika 텍스트 추출, document chunk 저장, Spring AI Ollama embedding/chat 호출, pgvector embedding 저장과 유사 chunk 검색, source citation, RAG answer history 저장, Agent Chat session/message history 저장, Prompt Template/Version/Active Prompt와 RAG/Agent prompt traceability, RAG latency metrics, prompt context 제한, Ollama generation option 적용, 프론트엔드 Web CI, API CI, Docker Compose 로컬 인프라 실행 구성까지입니다.
 
-예정 영역은 refresh token, HttpOnly Cookie 또는 BFF 인증 구조 검토, XSS/CSRF 보안 강화, workspace switcher, 사용자별 workspace filtering, 세부 RBAC policy, WebSocket, Redis Pub/Sub, multi-turn context memory, tool calling, prompt versioning UI, workflow automation, release copilot, Redis session/cache/queue, Monitoring입니다.
+예정 영역은 refresh token, HttpOnly Cookie 또는 BFF 인증 구조 검토, XSS/CSRF 보안 강화, workspace switcher, 사용자별 workspace filtering, 세부 RBAC policy, WebSocket, Redis Pub/Sub, multi-turn context memory, tool calling, prompt evaluation, prompt approval workflow, A/B test, rollback automation, workflow automation, release copilot, Redis session/cache/queue, Monitoring입니다.

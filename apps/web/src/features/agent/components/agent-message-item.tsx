@@ -41,6 +41,11 @@ export function AgentMessageItem({ message }: AgentMessageItemProps) {
             {message.model ? (
               <Badge variant="secondary">{message.model}</Badge>
             ) : null}
+            {message.promptTemplateName && message.promptVersion ? (
+              <Badge variant="outline">
+                Prompt {message.promptTemplateName} v{message.promptVersion}
+              </Badge>
+            ) : null}
             {message.totalMs != null ? (
               <Badge variant="outline">
                 총 {formatDuration(message.totalMs)}

@@ -39,6 +39,9 @@ public class RagAnswer {
 	@Column(name = "top_k", nullable = false)
 	private int topK;
 
+	@Column(name = "prompt_version_id")
+	private UUID promptVersionId;
+
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
 
@@ -70,6 +73,18 @@ public class RagAnswer {
 	private Integer answerCharCount;
 
 	public RagAnswer(UUID workspaceId, UUID userId, String question, String answer, String model, int topK) {
+		this(workspaceId, userId, question, answer, model, topK, null);
+	}
+
+	public RagAnswer(
+		UUID workspaceId,
+		UUID userId,
+		String question,
+		String answer,
+		String model,
+		int topK,
+		UUID promptVersionId
+	) {
 		this.id = UUID.randomUUID();
 		this.workspaceId = workspaceId;
 		this.userId = userId;
@@ -77,6 +92,7 @@ public class RagAnswer {
 		this.answer = answer;
 		this.model = model;
 		this.topK = topK;
+		this.promptVersionId = promptVersionId;
 	}
 
 	public void updateLatencyMetrics(RagLatencyMetrics metrics) {

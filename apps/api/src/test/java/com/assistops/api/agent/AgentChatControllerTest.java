@@ -18,6 +18,12 @@ import com.assistops.api.document.Document;
 import com.assistops.api.document.DocumentChunk;
 import com.assistops.api.document.DocumentChunkRepository;
 import com.assistops.api.document.DocumentRepository;
+import com.assistops.api.prompt.DefaultPromptContent;
+import com.assistops.api.prompt.PromptTemplate;
+import com.assistops.api.prompt.PromptTemplateRepository;
+import com.assistops.api.prompt.PromptType;
+import com.assistops.api.prompt.PromptVersion;
+import com.assistops.api.prompt.PromptVersionRepository;
 import com.assistops.api.rag.RagAnswer;
 import com.assistops.api.rag.RagAnswerRepository;
 import com.assistops.api.rag.RagAnswerRequest;
@@ -82,6 +88,12 @@ class AgentChatControllerTest extends AbstractPostgresContainerTest {
 
 	@Autowired
 	private RagAnswerSourceRepository ragAnswerSourceRepository;
+
+	@Autowired
+	private PromptTemplateRepository promptTemplateRepository;
+
+	@Autowired
+	private PromptVersionRepository promptVersionRepository;
 
 	@MockitoBean
 	private RagAnswerService ragAnswerService;
@@ -207,7 +219,7 @@ class AgentChatControllerTest extends AbstractPostgresContainerTest {
 		RegisteredUser user = register();
 		String sessionId = createSession(user.accessToken(), null);
 		RagAnswerResponse answer = createRagAnswerResponse(user, "AssistOps Free는 로컬 RAG 플랫폼입니다.");
-		given(ragAnswerService.answer(any(), any(RagAnswerRequest.class))).willReturn(answer);
+		given(ragAnswerService.answer(any(), any(RagAnswerRequest.class), any(PromptType.class))).willReturn(answer);
 
 		mockMvc.perform(post("/api/agent/sessions/{id}/messages", sessionId)
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + user.accessToken())
@@ -223,6 +235,9 @@ class AgentChatControllerTest extends AbstractPostgresContainerTest {
 			.andExpect(jsonPath("$.messages[1].role").value("ASSISTANT"))
 			.andExpect(jsonPath("$.messages[1].content").value("AssistOps Free는 로컬 RAG 플랫폼입니다."))
 			.andExpect(jsonPath("$.messages[1].ragAnswerId").value(answer.answerId().toString()))
+			.andExpect(jsonPath("$.messages[1].promptVersionId").value(answer.promptVersionId().toString()))
+			.andExpect(jsonPath("$.messages[1].promptTemplateName").value("Agent Test Prompt"))
+			.andExpect(jsonPath("$.messages[1].promptVersion").value(1))
 			.andExpect(jsonPath("$.messages[1].model").value("llama3.2"))
 			.andExpect(jsonPath("$.messages[1].totalMs").value(4200))
 			.andExpect(jsonPath("$.messages[1].chatGenerationMs").value(3900))
@@ -235,6 +250,7 @@ class AgentChatControllerTest extends AbstractPostgresContainerTest {
 		assertThat(messages.get(0).getRole()).isEqualTo(AgentChatRole.USER);
 		assertThat(messages.get(1).getRole()).isEqualTo(AgentChatRole.ASSISTANT);
 		assertThat(messages.get(1).getTotalMs()).isEqualTo(4200);
+		assertThat(messages.get(1).getPromptVersionId()).isEqualTo(answer.promptVersionId());
 		assertThat(messageSourceRepository.findByMessageIdOrderByCreatedAtAsc(messages.get(1).getId())).hasSize(1);
 	}
 
@@ -254,9 +270,14 @@ class AgentChatControllerTest extends AbstractPostgresContainerTest {
 		RegisteredUser user = register();
 		String sessionId = createSession(user.accessToken(), null);
 		RagAnswerResponse answer = createRagAnswerResponse(user, "AssistOps Free는 로컬 RAG 플랫폼입니다.");
-		given(ragAnswerService.streamAnswer(any(), any(RagAnswerRequest.class), any(RagAnswerStreamHandler.class)))
+		given(ragAnswerService.streamAnswer(
+			any(),
+			any(RagAnswerRequest.class),
+			any(PromptType.class),
+			any(RagAnswerStreamHandler.class)
+		))
 			.willAnswer(invocation -> {
-				RagAnswerStreamHandler handler = invocation.getArgument(2, RagAnswerStreamHandler.class);
+				RagAnswerStreamHandler handler = invocation.getArgument(3, RagAnswerStreamHandler.class);
 				RagAnswerSourceResponse source = answer.sources().getFirst();
 				handler.onSource(new ChunkSearchResult(
 					answer.workspaceId(),
@@ -312,7 +333,12 @@ class AgentChatControllerTest extends AbstractPostgresContainerTest {
 	void streamMessageSendsErrorEventWhenRagFails() throws Exception {
 		RegisteredUser user = register();
 		String sessionId = createSession(user.accessToken(), null);
-		given(ragAnswerService.streamAnswer(any(), any(RagAnswerRequest.class), any(RagAnswerStreamHandler.class)))
+		given(ragAnswerService.streamAnswer(
+			any(),
+			any(RagAnswerRequest.class),
+			any(PromptType.class),
+			any(RagAnswerStreamHandler.class)
+		))
 			.willThrow(new RuntimeException("ollama unavailable"));
 
 		MvcResult result = mockMvc.perform(post("/api/agent/sessions/{id}/messages/stream", sessionId)
@@ -354,7 +380,7 @@ class AgentChatControllerTest extends AbstractPostgresContainerTest {
 		RegisteredUser user = register();
 		String sessionId = createSession(user.accessToken(), "삭제 세션");
 		RagAnswerResponse answer = createRagAnswerResponse(user, "삭제할 답변입니다.");
-		given(ragAnswerService.answer(any(), any(RagAnswerRequest.class))).willReturn(answer);
+		given(ragAnswerService.answer(any(), any(RagAnswerRequest.class), any(PromptType.class))).willReturn(answer);
 		sendMessage(user.accessToken(), sessionId, "삭제할 질문입니다.");
 
 		mockMvc.perform(delete("/api/agent/sessions/{id}", sessionId)
@@ -416,8 +442,10 @@ class AgentChatControllerTest extends AbstractPostgresContainerTest {
 			"AssistOps Free는 무엇인가요?",
 			answerText,
 			"llama3.2",
-			3
+			3,
+			null
 		));
+		PromptVersion promptVersion = createPromptVersion(workspaceId, user.userId());
 		RagLatencyMetrics metrics = new RagLatencyMetrics(4200L, 120L, 30L, 5L, 3900L, 40L, 1, 840, answerText.length());
 		ragAnswer.updateLatencyMetrics(metrics);
 
@@ -429,6 +457,9 @@ class AgentChatControllerTest extends AbstractPostgresContainerTest {
 			answerText,
 			"llama3.2",
 			3,
+			promptVersion.getId(),
+			"Agent Test Prompt",
+			promptVersion.getVersion(),
 			ragAnswer.getCreatedAt(),
 			List.of(new RagAnswerSourceResponse(
 				UUID.randomUUID(),
@@ -441,6 +472,28 @@ class AgentChatControllerTest extends AbstractPostgresContainerTest {
 			)),
 			metrics
 		);
+	}
+
+	private PromptVersion createPromptVersion(UUID workspaceId, UUID userId) {
+		PromptTemplate template = promptTemplateRepository.save(new PromptTemplate(
+			workspaceId,
+			"Agent Test Prompt",
+			"Agent test prompt",
+			PromptType.AGENT_CHAT,
+			userId
+		));
+		PromptVersion version = promptVersionRepository.save(new PromptVersion(
+			template.getId(),
+			1,
+			DefaultPromptContent.SYSTEM_PROMPT,
+			DefaultPromptContent.USER_PROMPT_TEMPLATE,
+			DefaultPromptContent.CONTEXT_TEMPLATE,
+			null,
+			userId
+		));
+		template.activate(version.getId());
+
+		return version;
 	}
 
 	private RegisteredUser register() throws Exception {

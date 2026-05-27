@@ -52,6 +52,14 @@ export function RagAnswerCard({ answer }: RagAnswerCardProps) {
           </div>
         </dl>
 
+        {answer.promptTemplateName && answer.promptVersion ? (
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="outline">
+              Prompt {answer.promptTemplateName} v{answer.promptVersion}
+            </Badge>
+          </div>
+        ) : null}
+
         {answer.latencyMetrics ? (
           <dl className="grid gap-2 text-sm sm:grid-cols-5">
             <MetricBadge

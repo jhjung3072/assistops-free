@@ -1,5 +1,6 @@
 package com.assistops.api.agent;
 
+import com.assistops.api.prompt.PromptVersionMetadata;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -18,7 +19,8 @@ public record AgentChatSessionDetailResponse(
 	public static AgentChatSessionDetailResponse from(
 		AgentChatSession session,
 		List<AgentChatMessage> messages,
-		Map<UUID, List<AgentChatMessageSource>> sourcesByMessageId
+		Map<UUID, List<AgentChatMessageSource>> sourcesByMessageId,
+		Map<UUID, PromptVersionMetadata> promptMetadataByVersionId
 	) {
 		return new AgentChatSessionDetailResponse(
 			session.getId(),
@@ -30,7 +32,10 @@ public record AgentChatSessionDetailResponse(
 			messages.stream()
 				.map(message -> AgentChatMessageResponse.from(
 					message,
-					sourcesByMessageId.getOrDefault(message.getId(), List.of())
+					sourcesByMessageId.getOrDefault(message.getId(), List.of()),
+					message.getPromptVersionId() == null
+						? null
+						: promptMetadataByVersionId.get(message.getPromptVersionId())
 				))
 				.toList()
 		);

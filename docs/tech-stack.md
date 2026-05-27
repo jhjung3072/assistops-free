@@ -41,6 +41,7 @@
 | Backend | Spring AI Ollama | 로컬 Ollama embedding/chat model 호출 | 사용 중 |
 | Backend | Querydsl | 문서, RAG 답변 이력, Agent Chat 세션 목록의 타입 안전 동적 쿼리 | 사용 중 |
 | Backend | Dynamic Filtering | keyword, status, model, 기간, pagination 기반 목록 조회 | 사용 중 |
+| Backend | Prompt Versioning | prompt template/version 저장, active version 관리, RAG/Agent traceability | 사용 중 |
 | Backend | Springdoc OpenAPI UI | API 문서화와 Swagger UI | 사용 중 |
 | Backend | Backend DB integration | Spring Boot와 PostgreSQL 연결 | 사용 중 |
 | Backend | MinIO Java SDK | S3-compatible object storage 업로드/다운로드/삭제 | 사용 중 |
@@ -67,10 +68,13 @@
 | AI | Agent Chat UI | RAG Answer를 세션형 채팅 UX로 표시 | 사용 중 |
 | AI | Chat session persistence | Agent session과 message history 저장 | 사용 중 |
 | AI | SSE / fetch streaming | Agent Chat assistant 답변을 `text/event-stream`으로 점진 표시 | 사용 중 |
+| AI | Prompt Traceability | RAG 답변과 Agent assistant message에 사용 prompt version 저장/표시 | 사용 중 |
+| AI | Prompt Evaluation | prompt 품질 평가와 비교 자동화 | 예정 |
 | AI | WebSocket | 양방향 realtime agent event 처리 | 예정 |
 | AI | Redis Pub/Sub | 여러 worker 또는 클라이언트로 event fan-out | 예정 |
 | AI | Multi-turn context memory | 이전 대화 맥락을 prompt에 반영하는 구조 | 예정 |
-| AI | prompt versioning | 프롬프트 변경 이력 관리와 UI | 예정 |
+| AI | Prompt Approval Workflow | prompt 변경 승인 흐름 | 예정 |
+| AI | Prompt A/B Test | prompt version별 성능 비교 실험 | 예정 |
 | AI | Tool calling | 내부 업무 액션 실행 구조 | 예정 |
 | Database / Storage | PostgreSQL | 주요 업무 데이터 저장. Docker named volume 사용 | 로컬 인프라 구성 및 API 연결 |
 | Database / Storage | pgvector | `document_chunks.embedding vector(768)` 저장과 유사도 검색 | 사용 중 |

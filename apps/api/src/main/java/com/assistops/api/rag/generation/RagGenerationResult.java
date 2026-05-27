@@ -4,6 +4,16 @@ public record RagGenerationResult(
 	String answer,
 	long promptBuildMs,
 	long chatGenerationMs,
-	int promptContextCharCount
+	int promptContextCharCount,
+	String model
 ) {
+
+	public RagGenerationResult(
+		String answer,
+		long promptBuildMs,
+		long chatGenerationMs,
+		int promptContextCharCount
+	) {
+		this(answer, promptBuildMs, chatGenerationMs, promptContextCharCount, null);
+	}
 }

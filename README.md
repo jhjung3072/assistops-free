@@ -2,7 +2,7 @@
 
 `AssistOps Free`는 유료 AI API나 관리형 클라우드 서비스에 의존하지 않고, 로컬 LLM과 오픈소스 인프라만으로 동작하는 AI 업무 자동화 플랫폼을 목표로 하는 포트폴리오 프로젝트입니다.
 
-현재 단계는 **Querydsl Dynamic Filtering Foundation**입니다. Next.js 프론트엔드, Spring Boot API, Docker Compose 기반 로컬 인프라, PostgreSQL + pgvector 연결, Flyway/JPA 영속성 기반, JWT Bearer 인증 API, 프론트엔드 cookie token storage 기반 인증 화면, 문서 업로드/목록/다운로드/삭제/처리/embedding 화면, semantic chunk search 화면, RAG Q&A 화면, Agent Chat 세션 UI와 streaming 응답이 구성되어 있습니다. MinIO는 원본 문서 저장소로 연결되어 있고, Ollama는 `nomic-embed-text` embedding과 `llama3.2` chat answer generation에 연결되어 있습니다. 문서 목록, RAG 답변 이력, Agent Chat 세션 목록에는 Querydsl 기반 동적 검색/필터링/페이징이 추가되었습니다. Redis는 아직 애플리케이션 코드와 연결하지 않았습니다.
+현재 단계는 **Prompt Versioning Foundation**입니다. Next.js 프론트엔드, Spring Boot API, Docker Compose 기반 로컬 인프라, PostgreSQL + pgvector 연결, Flyway/JPA 영속성 기반, JWT Bearer 인증 API, 프론트엔드 cookie token storage 기반 인증 화면, 문서 업로드/목록/다운로드/삭제/처리/embedding 화면, semantic chunk search 화면, RAG Q&A 화면, Agent Chat 세션 UI와 streaming 응답이 구성되어 있습니다. MinIO는 원본 문서 저장소로 연결되어 있고, Ollama는 `nomic-embed-text` embedding과 `llama3.2` chat answer generation에 연결되어 있습니다. 문서 목록, RAG 답변 이력, Agent Chat 세션 목록에는 Querydsl 기반 동적 검색/필터링/페이징이 추가되었습니다. RAG/Agent 답변 생성 prompt는 DB의 prompt template/version으로 관리하며, 답변 이력과 assistant message에 사용한 prompt version을 추적합니다. Redis는 아직 애플리케이션 코드와 연결하지 않았습니다.
 
 ## 프로젝트 목표
 
@@ -35,7 +35,8 @@
 | AI                 | `nomic-embed-text` local embedding model                                                                                                        | 사용 중   |
 | AI                 | `llama3.2` local chat model, RAG answer generation, source citation                                                                             | 사용 중   |
 | AI                 | Agent Chat session UI, message persistence, SSE/fetch streaming                                                                                 | 사용 중   |
-| AI                 | prompt versioning, tool calling style internal actions                                                                                          | 예정      |
+| AI                 | prompt versioning, prompt traceability                                                                                                          | 사용 중   |
+| AI                 | prompt evaluation, approval workflow, A/B test, tool calling style internal actions                                                              | 예정      |
 | Database / Storage | PostgreSQL, pgvector                                                                                                                            | 문서/청크/embedding 저장과 vector search 사용 중 |
 | Database / Storage | MinIO                                                                                                                                           | 원본 문서 저장소로 사용 중 |
 | Database / Storage | Redis                                                                                                                                           | 로컬 인프라 구성, 앱 미연동 |
@@ -53,6 +54,7 @@
 - `apps/web`: 문서 embedding 실행 버튼과 semantic chunk search 화면 구성
 - `apps/web`: RAG Q&A 화면, 답변 출처 표시, 답변 이력 조회/삭제 UI 구성
 - `apps/web`: Agent Chat 화면, 세션 목록, 메시지 목록, streaming 답변, 출처와 latency 표시 UI 구성
+- `apps/web`: Prompt Template/Version 관리 화면과 RAG/Agent prompt version 표시 구성
 - `apps/web`: 문서/RAG 이력/Agent 세션 검색, 필터, 페이지네이션 UI 구성
 - `apps/web`: cookie에서 accessToken을 읽어 Authorization header를 붙이는 fetch API client, TanStack Query, Zustand auth store 연동
 - `apps/api`: Spring Boot API 초기 골격 및 `GET /api/health` 구현
@@ -65,6 +67,7 @@
 - `apps/api`: Ollama chat model 기반 RAG answer API, 출처 저장, 답변 이력 조회/삭제 구성
 - `apps/api`: Agent Chat session/message/source 저장 API와 streaming message API 구성. assistant 답변 생성은 기존 RAG Answer Service를 재사용
 - `apps/api`: Querydsl 기반 문서 목록, RAG 답변 이력, Agent Chat 세션 목록 동적 조회 구성
+- `apps/api`: Prompt Template/Version API, active prompt 조회, RAG/Agent 답변의 prompt version 추적 구성
 - `docker-compose.yml`: PostgreSQL + pgvector, Redis, MinIO, Ollama 로컬 인프라 실행 구성
 - `infra/postgres/init`: PostgreSQL 시작 시 pgvector extension 활성화 SQL 추가
 - 루트 `pnpm-workspace.yaml`: `apps/web` workspace 등록
@@ -85,6 +88,7 @@
 - Redis Pub/Sub 또는 queue 기반 비동기 처리
 - multi-turn context memory
 - tool calling
+- prompt evaluation, approval workflow, A/B test, rollback automation
 - Workflow Builder
 - OpenTelemetry, Prometheus, Grafana, Loki 관측성
 
@@ -134,6 +138,7 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
 | `/search` | embedding된 chunk semantic search |
 | `/rag` | 문서 기반 RAG Q&A와 답변 이력 |
 | `/agent` | 세션형 Agent Chat UI와 streaming 답변 |
+| `/prompts` | RAG/Agent prompt template과 version 관리 |
 
 Health API 확인:
 
@@ -209,6 +214,17 @@ curl -N -X POST http://localhost:8080/api/agent/sessions/<sessionId>/messages/st
   -H 'Accept: text/event-stream' \
   -H 'Content-Type: application/json' \
   -d '{"content":"문서 기반으로 답변해줘","topK":3}'
+
+curl -X POST http://localhost:8080/api/prompts \
+  -H 'Authorization: Bearer <accessToken>' \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Default RAG Prompt","type":"RAG_ANSWER","systemPrompt":"제공된 문서만 근거로 한국어로 답변합니다.","userPromptTemplate":"Context:\n{{context}}\n\nQuestion:\n{{question}}\n\nAnswer:"}'
+
+curl http://localhost:8080/api/prompts?type=RAG_ANSWER \
+  -H 'Authorization: Bearer <accessToken>'
+
+curl -X POST http://localhost:8080/api/prompts/<promptId>/versions/<versionId>/activate \
+  -H 'Authorization: Bearer <accessToken>'
 ```
 
 주요 Auth endpoint:
@@ -294,10 +310,35 @@ Agent Chat streaming event는 `text/event-stream` 형식입니다.
 | `source` | 검색된 source chunk 전달 |
 | `token` | assistant 답변 token/chunk 전달 |
 | `latency` | total, search, generation, persist latency 전달 |
-| `done` | assistant message id, rag answer id 전달 |
+| `done` | assistant message id, rag answer id, prompt version metadata 전달 |
 | `error` | streaming 중 오류 전달 |
 
 현재 단계에서는 WebSocket, Redis Pub/Sub, queue 기반 비동기 처리, multi-turn conversation, Agent Chat 장기 메모리, tool calling, Workflow Builder는 아직 구현하지 않았습니다.
+
+## Prompt Versioning
+
+RAG Answer와 Agent Chat은 코드에 고정된 prompt가 아니라 DB의 active prompt version을 사용합니다. `/prompts` 화면에서 workspace prompt template을 만들고 version을 추가한 뒤 active version을 전환할 수 있습니다.
+
+지원되는 prompt type:
+
+| Type | 사용 위치 |
+| --- | --- |
+| `RAG_ANSWER` | `/rag`, `POST /api/rag/answer` |
+| `AGENT_CHAT` | `/agent`, Agent Chat non-streaming/streaming message API |
+
+지원 placeholder:
+
+| Placeholder | 설명 |
+| --- | --- |
+| `{{context}}` | semantic search로 찾은 chunk context |
+| `{{question}}` | 사용자 질문 |
+| `{{language}}` | 기본값 `한국어` |
+
+context template에서는 `{{index}}`, `{{documentName}}`, `{{chunkIndex}}`, `{{content}}`를 사용할 수 있습니다. Active prompt가 아직 없으면 애플리케이션이 인증된 사용자의 첫 workspace에 기본 prompt를 lazy 생성합니다. SQL seed migration은 사용자 FK가 필요한 `created_by` 값을 안전하게 결정하기 어렵기 때문에 no-op 설명 migration으로 두었습니다.
+
+RAG 답변은 `rag_answers.prompt_version_id`에 사용한 version을 저장하고, Agent assistant message는 `agent_chat_messages.prompt_version_id`에 저장합니다. `/rag` 답변 카드와 `/agent` assistant message에는 prompt template name/version이 표시됩니다.
+
+현재는 prompt 생성, version 생성, active version 전환, soft delete, 사용 이력 추적까지만 구현했습니다. A/B 테스트, 자동 평가, approval workflow, rollback automation은 후속 단계입니다.
 
 주요 Document endpoint:
 
@@ -322,6 +363,14 @@ Agent Chat streaming event는 `text/event-stream` 형식입니다.
 | `POST` | `/api/agent/sessions/{id}/messages` | 사용자 메시지 저장 후 RAG Answer Service로 assistant 답변 생성 |
 | `POST` | `/api/agent/sessions/{id}/messages/stream` | 사용자 메시지 저장 후 assistant 답변을 `text/event-stream`으로 전송 |
 | `DELETE` | `/api/agent/sessions/{id}` | Agent Chat session과 메시지 삭제 |
+| `POST` | `/api/prompts` | Prompt template과 첫 version 생성 |
+| `GET` | `/api/prompts` | Prompt template 목록 조회. `type` optional |
+| `GET` | `/api/prompts/active` | Type별 active prompt template 조회 |
+| `GET` | `/api/prompts/{id}` | Prompt template 상세와 active version 조회 |
+| `DELETE` | `/api/prompts/{id}` | Prompt template soft delete |
+| `POST` | `/api/prompts/{id}/versions` | 새 prompt version 생성 |
+| `GET` | `/api/prompts/{id}/versions` | Prompt version 목록 조회 |
+| `POST` | `/api/prompts/{id}/versions/{versionId}/activate` | Prompt version 활성화 |
 
 ## 동적 목록 조회
 
@@ -451,7 +500,7 @@ DB_PORT=25432 pnpm dev:api
 - Redis Pub/Sub 기반 이벤트 fan-out
 - multi-turn context memory
 - Agent tool calling
-- RAG prompt evaluation과 답변 품질 개선
+- RAG prompt evaluation, approval workflow, A/B test
 - React Flow 기반 Workflow Builder
 - AI Release Copilot
 - GitHub Actions CI 고도화

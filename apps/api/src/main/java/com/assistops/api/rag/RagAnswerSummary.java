@@ -10,6 +10,7 @@ public record RagAnswerSummary(
 	String answerPreview,
 	String model,
 	int topK,
+	UUID promptVersionId,
 	long sourceCount,
 	Long totalMs,
 	Instant createdAt
@@ -30,6 +31,7 @@ public record RagAnswerSummary(
 			preview,
 			answer.getModel(),
 			answer.getTopK(),
+			answer.getPromptVersionId(),
 			sourceCount,
 			answer.getTotalMs(),
 			answer.getCreatedAt()

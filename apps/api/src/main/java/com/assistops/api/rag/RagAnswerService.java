@@ -2,6 +2,11 @@ package com.assistops.api.rag;
 
 import com.assistops.api.global.exception.BadRequestException;
 import com.assistops.api.global.exception.NotFoundException;
+import com.assistops.api.prompt.PromptResolvedVersion;
+import com.assistops.api.prompt.PromptService;
+import com.assistops.api.prompt.PromptType;
+import com.assistops.api.prompt.PromptVersion;
+import com.assistops.api.prompt.PromptVersionMetadata;
 import com.assistops.api.rag.generation.RagGenerationResult;
 import com.assistops.api.rag.generation.RagGenerationService;
 import com.assistops.api.rag.generation.RagProperties;
@@ -31,6 +36,7 @@ public class RagAnswerService {
 	private final RagAnswerQueryRepository ragAnswerQueryRepository;
 	private final RagAnswerSourceRepository ragAnswerSourceRepository;
 	private final WorkspaceMemberRepository workspaceMemberRepository;
+	private final PromptService promptService;
 
 	public RagAnswerService(
 		ChunkSearchService chunkSearchService,
@@ -39,7 +45,8 @@ public class RagAnswerService {
 		RagAnswerRepository ragAnswerRepository,
 		RagAnswerQueryRepository ragAnswerQueryRepository,
 		RagAnswerSourceRepository ragAnswerSourceRepository,
-		WorkspaceMemberRepository workspaceMemberRepository
+		WorkspaceMemberRepository workspaceMemberRepository,
+		PromptService promptService
 	) {
 		this.chunkSearchService = chunkSearchService;
 		this.ragGenerationService = ragGenerationService;
@@ -48,11 +55,17 @@ public class RagAnswerService {
 		this.ragAnswerQueryRepository = ragAnswerQueryRepository;
 		this.ragAnswerSourceRepository = ragAnswerSourceRepository;
 		this.workspaceMemberRepository = workspaceMemberRepository;
+		this.promptService = promptService;
 	}
 
 	@Transactional
 	public RagAnswerResponse answer(User user, RagAnswerRequest request) {
-		return answerInternal(user, request, null);
+		return answerInternal(user, request, PromptType.RAG_ANSWER, null);
+	}
+
+	@Transactional
+	public RagAnswerResponse answer(User user, RagAnswerRequest request, PromptType promptType) {
+		return answerInternal(user, request, promptType, null);
 	}
 
 	@Transactional
@@ -61,12 +74,23 @@ public class RagAnswerService {
 		RagAnswerRequest request,
 		RagAnswerStreamHandler streamHandler
 	) {
-		return answerInternal(user, request, streamHandler);
+		return answerInternal(user, request, PromptType.RAG_ANSWER, streamHandler);
+	}
+
+	@Transactional
+	public RagAnswerResponse streamAnswer(
+		User user,
+		RagAnswerRequest request,
+		PromptType promptType,
+		RagAnswerStreamHandler streamHandler
+	) {
+		return answerInternal(user, request, promptType, streamHandler);
 	}
 
 	private RagAnswerResponse answerInternal(
 		User user,
 		RagAnswerRequest request,
+		PromptType promptType,
 		RagAnswerStreamHandler streamHandler
 	) {
 		long totalStart = System.nanoTime();
@@ -85,9 +109,15 @@ public class RagAnswerService {
 			if (streamHandler != null) {
 				results.forEach(streamHandler::onSource);
 			}
+			PromptResolvedVersion prompt = promptService.resolveActivePromptVersion(user, workspaceId, promptType);
 
 			stage = "generation";
-			RagGenerationResult generationResult = generateAnswer(request, results, streamHandler);
+			RagGenerationResult generationResult = generateAnswer(
+				request,
+				results,
+				prompt.version(),
+				streamHandler
+			);
 
 			stage = "persist";
 			long persistStart = System.nanoTime();
@@ -96,8 +126,9 @@ public class RagAnswerService {
 				user.getId(),
 				request.question(),
 				generationResult.answer(),
-				ragGenerationService.modelName(),
-				topK
+				modelName(generationResult),
+				topK,
+				prompt.version().getId()
 			));
 
 			List<RagAnswerSource> sources = results.stream()
@@ -135,7 +166,7 @@ public class RagAnswerService {
 				request.question().length()
 			);
 
-			return RagAnswerResponse.from(ragAnswer, sources, metrics);
+			return RagAnswerResponse.from(ragAnswer, sources, metrics, prompt.metadata());
 		}
 		catch (RuntimeException exception) {
 			log.warn(
@@ -152,6 +183,7 @@ public class RagAnswerService {
 	private RagGenerationResult generateAnswer(
 		RagAnswerRequest request,
 		List<ChunkSearchResult> results,
+		PromptVersion promptVersion,
 		RagAnswerStreamHandler streamHandler
 	) {
 		if (results.isEmpty()) {
@@ -159,18 +191,25 @@ public class RagAnswerService {
 				streamHandler.onToken(INSUFFICIENT_CONTEXT_ANSWER);
 			}
 
-			return new RagGenerationResult(INSUFFICIENT_CONTEXT_ANSWER, 0, 0, 0);
+			return new RagGenerationResult(
+				INSUFFICIENT_CONTEXT_ANSWER,
+				0,
+				0,
+				0,
+				modelName(promptVersion)
+			);
 		}
 
 		if (streamHandler != null) {
 			return ragGenerationService.generateAnswerStream(
 				request.question(),
 				results,
+				promptVersion,
 				streamHandler::onToken
 			);
 		}
 
-		return ragGenerationService.generateAnswer(request.question(), results);
+		return ragGenerationService.generateAnswer(request.question(), results, promptVersion);
 	}
 
 	@Transactional(readOnly = true)
@@ -194,8 +233,9 @@ public class RagAnswerService {
 	public RagAnswerResponse getAnswer(User user, UUID answerId) {
 		RagAnswer answer = findAccessibleAnswer(user.getId(), answerId);
 		List<RagAnswerSource> sources = ragAnswerSourceRepository.findByRagAnswerIdOrderByCreatedAtAsc(answerId);
+		PromptVersionMetadata metadata = promptService.getMetadata(answer.getPromptVersionId());
 
-		return RagAnswerResponse.from(answer, sources);
+		return RagAnswerResponse.from(answer, sources, RagLatencyMetrics.from(answer), metadata);
 	}
 
 	@Transactional
@@ -262,5 +302,15 @@ public class RagAnswerService {
 
 	private long elapsedMs(long startedAt) {
 		return (System.nanoTime() - startedAt) / 1_000_000L;
+	}
+
+	private String modelName(RagGenerationResult generationResult) {
+		return generationResult.model() == null ? ragGenerationService.modelName() : generationResult.model();
+	}
+
+	private String modelName(PromptVersion promptVersion) {
+		return org.springframework.util.StringUtils.hasText(promptVersion.getModel())
+			? promptVersion.getModel()
+			: ragGenerationService.modelName();
 	}
 }

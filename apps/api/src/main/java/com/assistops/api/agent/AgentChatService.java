@@ -1,6 +1,9 @@
 package com.assistops.api.agent;
 
 import com.assistops.api.global.exception.NotFoundException;
+import com.assistops.api.prompt.PromptService;
+import com.assistops.api.prompt.PromptType;
+import com.assistops.api.prompt.PromptVersionMetadata;
 import com.assistops.api.rag.RagAnswerRequest;
 import com.assistops.api.rag.RagAnswerResponse;
 import com.assistops.api.rag.RagAnswerService;
@@ -36,6 +39,7 @@ public class AgentChatService {
 	private final AgentChatMessageSourceRepository sourceRepository;
 	private final WorkspaceMemberRepository workspaceMemberRepository;
 	private final RagAnswerService ragAnswerService;
+	private final PromptService promptService;
 	private final TaskExecutor taskExecutor;
 	private final TransactionTemplate transactionTemplate;
 
@@ -46,6 +50,7 @@ public class AgentChatService {
 		AgentChatMessageSourceRepository sourceRepository,
 		WorkspaceMemberRepository workspaceMemberRepository,
 		RagAnswerService ragAnswerService,
+		PromptService promptService,
 		TaskExecutor taskExecutor,
 		TransactionTemplate transactionTemplate
 	) {
@@ -55,6 +60,7 @@ public class AgentChatService {
 		this.sourceRepository = sourceRepository;
 		this.workspaceMemberRepository = workspaceMemberRepository;
 		this.ragAnswerService = ragAnswerService;
+		this.promptService = promptService;
 		this.taskExecutor = taskExecutor;
 		this.transactionTemplate = transactionTemplate;
 	}
@@ -103,7 +109,8 @@ public class AgentChatService {
 
 		RagAnswerResponse answer = ragAnswerService.answer(
 			user,
-			new RagAnswerRequest(content, request.topK(), session.getWorkspaceId())
+			new RagAnswerRequest(content, request.topK(), session.getWorkspaceId()),
+			PromptType.AGENT_CHAT
 		);
 		AgentChatMessage assistantMessage = messageRepository.save(AgentChatMessage.assistant(session.getId(), answer));
 		List<AgentChatMessageSource> sources = answer.sources()
@@ -165,6 +172,7 @@ public class AgentChatService {
 			RagAnswerResponse answer = ragAnswerService.streamAnswer(
 				user,
 				new RagAnswerRequest(context.content(), context.topK(), context.workspaceId()),
+				PromptType.AGENT_CHAT,
 				new RagAnswerStreamHandler() {
 					@Override
 					public void onSource(com.assistops.api.rag.search.ChunkSearchResult source) {
@@ -187,7 +195,10 @@ public class AgentChatService {
 			sendEvent(emitter, "latency", answer.latencyMetrics());
 			sendEvent(emitter, "done", new AgentChatStreamDoneResponse(
 				assistantMessage.getId(),
-				answer.answerId()
+				answer.answerId(),
+				answer.promptVersionId(),
+				answer.promptTemplateName(),
+				answer.promptVersion()
 			));
 			emitter.complete();
 		}
@@ -245,8 +256,9 @@ public class AgentChatService {
 	private AgentChatSessionDetailResponse toDetailResponse(AgentChatSession session) {
 		List<AgentChatMessage> messages = messageRepository.findBySessionIdOrderByCreatedAtAscIdAsc(session.getId());
 		Map<UUID, List<AgentChatMessageSource>> sourcesByMessageId = findSourcesByMessageId(messages);
+		Map<UUID, PromptVersionMetadata> promptMetadataByVersionId = findPromptMetadataByVersionId(messages);
 
-		return AgentChatSessionDetailResponse.from(session, messages, sourcesByMessageId);
+		return AgentChatSessionDetailResponse.from(session, messages, sourcesByMessageId, promptMetadataByVersionId);
 	}
 
 	private Map<UUID, List<AgentChatMessageSource>> findSourcesByMessageId(Collection<AgentChatMessage> messages) {
@@ -261,6 +273,17 @@ public class AgentChatService {
 		return sourceRepository.findByMessageIdInOrderByCreatedAtAsc(messageIds)
 			.stream()
 			.collect(Collectors.groupingBy(AgentChatMessageSource::getMessageId));
+	}
+
+	private Map<UUID, PromptVersionMetadata> findPromptMetadataByVersionId(Collection<AgentChatMessage> messages) {
+		return messages.stream()
+			.map(AgentChatMessage::getPromptVersionId)
+			.filter(java.util.Objects::nonNull)
+			.distinct()
+			.collect(Collectors.toMap(
+				versionId -> versionId,
+				promptService::getMetadata
+			));
 	}
 
 	private UUID resolveWorkspaceId(UUID userId, UUID requestedWorkspaceId) {

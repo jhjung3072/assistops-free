@@ -30,6 +30,9 @@ export type AgentChatMessage = {
   role: AgentChatRole;
   content: string;
   ragAnswerId: string | null;
+  promptVersionId: string | null;
+  promptTemplateName: string | null;
+  promptVersion: number | null;
   model: string | null;
   totalMs: number | null;
   chatGenerationMs: number | null;
@@ -84,6 +87,9 @@ export type AgentChatStreamSource = Omit<AgentChatMessageSource, "id">;
 export type AgentChatStreamDone = {
   assistantMessageId: string;
   ragAnswerId: string;
+  promptVersionId: string | null;
+  promptTemplateName: string | null;
+  promptVersion: number | null;
 };
 
 export type AgentChatStreamError = {

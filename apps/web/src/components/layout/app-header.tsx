@@ -35,6 +35,10 @@ const navItems = [
     href: "/agent",
   },
   {
+    label: "Prompts",
+    href: "/prompts",
+  },
+  {
     label: "Roadmap",
     href: "/roadmap",
   },

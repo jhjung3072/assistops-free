@@ -148,11 +148,11 @@
 - `/rag`는 단발성 Q&A, `/agent`는 세션형 채팅 UI로 역할 분리
 - 현재는 single-turn RAG 답변을 세션에 저장하는 구조
 - WebSocket, Redis Pub/Sub, multi-turn context memory, tool calling은 후속 개선 후보
-- 다음 단계 후보는 prompt versioning 또는 tool calling foundation
+- 이후 Querydsl 동적 조회와 Prompt Versioning 기반으로 확장
 
 ## Phase 7.5: Querydsl Dynamic Filtering Foundation
 
-현재 진행 중인 단계입니다.
+기본 기반 구성을 마친 단계입니다.
 
 - Querydsl JPA와 Jakarta annotation processor 설정
 - `JPAQueryFactory` bean 구성
@@ -163,7 +163,23 @@
 - 목록 응답은 기존 배열 필드를 유지하면서 `page` 메타데이터를 추가
 - pgvector similarity search와 embedding vector update는 native SQL/JDBC 유지
 - Redis cache와 관리자 통계 dashboard는 아직 구현하지 않음
-- 다음 단계 후보는 prompt versioning 또는 workflow builder foundation
+- 다음 단계 후보는 Workflow Builder Foundation 또는 Tool Calling Foundation
+
+## Phase 7.6: Prompt Versioning Foundation
+
+기본 기반 구성을 마친 단계입니다.
+
+- Prompt Template 생성/목록/상세/삭제 API 구성
+- Prompt Version 생성/목록/활성화 API 구성
+- Type별 active prompt version 조회 구성
+- Active prompt가 없을 때 기존 동작과 같은 기본 prompt를 lazy 생성
+- RAG Answer 생성 시 active `RAG_ANSWER` prompt version 사용
+- Agent Chat non-streaming/streaming 답변 생성 시 active `AGENT_CHAT` prompt version 사용
+- `rag_answers.prompt_version_id`, `agent_chat_messages.prompt_version_id`로 사용 prompt 추적
+- `/prompts` 관리 화면, version preview, active version 표시/전환 UI 구성
+- `/rag` 답변 카드와 `/agent` assistant message에 prompt template name/version 표시
+- A/B 테스트, 자동 평가, approval workflow, rollback automation은 후속 작업으로 유지
+- 다음 단계 후보는 Workflow Builder Foundation 또는 Tool Calling Foundation
 
 ## Phase 8: Workflow Builder
 
